@@ -1,0 +1,33 @@
+
+.skin-blue .main-header {
+  background-color: rgb(56,126,63) !important;
+}
+
+.skin-blue .main-sidebar {
+  background-color: rgb(56,126,63) !important;
+}
+
+.skin-blue .sidebar-menu > li > a:hover {
+  background-color: rgb(46,101,49) !important;
+}
+
+.skin-blue .sidebar-menu > li.active > a {
+  background-color: rgb(41,90,43) !important;
+}
+
+.skin-blue .sidebar-menu > li > a {
+  color: white !important;
+}
+
+.table {
+    display: flex;
+    justify-content: center; 
+    align-items: center; 
+    margin-top: 30px; 
+    width: 100%;
+    white-space: nowrap;
+}
+
+.metadata-dropdown {
+  width: 150px; 
+}
