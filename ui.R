@@ -65,9 +65,46 @@ nutrient_names_content <- fluidPage(
 
 #UNIT CONVERSION TAB
 unit_conversion_content <- fluidPage(
-  
+  tags$style(HTML("
+  .form-box {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    margin-top: 20px;
+    margin-bottom: 20px;
+    width: 90%;
+  }
+    .form-row {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .form-header {
+      font-weight: bold;
+      background-color: #f5f5f5;
+      padding: 8px 0;
+      border-bottom: 2px solid #ccc;
+    }
+  ")),
+
   h3("Provide Conversion Values for All Units"),
-  div(class = 'table', DTOutput('conversionTable')),
+  # div(class = 'table', DTOutput('conversionTable')),
+  # Table headers
+  div(class="form-box",
+  fluidRow(
+    column(2, div(class = "form-header", "Nutrient")),
+    column(2, div(class = "form-header", "Description")),
+    column(2, div(class = "form-header", "Sample Value")),
+    column(1, div(class = "form-header", "Unit")),
+    column(2, div(class = "form-header", "Conversion Multiplier")),
+    column(2, div(class = "form-header", "Converted Value"))
+  ),
+  
+  # Dynamic form
+  uiOutput("nutrient_forms"),
+      
+      ),
   actionButton('save_units', 'Save and Continue'),
   
 )

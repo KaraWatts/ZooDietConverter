@@ -172,34 +172,51 @@ server <- function(input, output, session) {
     
     
     if (!is.null(saved_settings$nutrient_key)) {
-      nutrient_names <- saved_settings$nutrient_key %>%
-        mutate(Nutrient = Selected_nutrient)
-      }
+      selected_nutrients <- saved_settings$nutrient_key$Selected_nutrient
+    } else {
+        selected_nutrients <- NULL
+    }
 
     nutrData$nutrient_names <- nutrient_names
+    
+    print("SELECTED NUTS")
+    print(selected_nutrients)
+    
+    print("NUT NAMES")
+    print(nutrient_names)
 
     # Create Dropdown menu and add it to each row
-    nutrient_names$Nutrient_selector <- vapply(1:nrow(nutrient_names), function(i) {
-      # Check if there is a match for the nutrient in constants$Nutrient
-      selected_value <- ifelse(nutrient_names$Nutrient[i] %in% constants$Nutrient, 
-                               nutrient_names$Nutrient[i], 
-                               constants$Nutrient[1])  # Default to the first option if no match
+    nutrient_names$Nutrient_selector <- vapply(seq_len(nrow(nutrient_names)), function(i) {
+      current_nutrient <- nutrient_names$Nutrient[i]
       
-      # Create the dropdown with the selected value
+      selected_value <- if (!is.null(selected_nutrients[i]) && selected_nutrients[i] != "") {
+        selected_nutrients[i]
+      } else if (nutrient_names$Nutrient[i] %in% constants$Nutrient) {
+        nutrient_names$Nutrient[i]
+      } else {
+        constants$Nutrient[1]  # Fallback
+      }
+      
       as.character(
         selectInput(
-          paste0("sel", i), 
-          label = NULL, 
-          choices = constants$Nutrient, 
-          selected = selected_value,  # Set the default selected value
+          inputId = paste0("sel", i),
+          label = NULL,
+          choices = constants$Nutrient,
+          selected = selected_value,
           selectize = FALSE
         )
       )
     }, character(1))
-
+    
+    table_nutrients <- if ("Selected_nutrient" %in% names(nutrient_names)) {
+      nutrient_names %>%
+        select(-Selected_nutrient)
+    } else {
+      nutrient_names
+    }
 
     datatable(
-      nutrient_names,
+      table_nutrients,
       escape = FALSE,
       select = "none",
       options = list(
@@ -225,29 +242,27 @@ server <- function(input, output, session) {
        input[[paste0("sel", i)]]
      })
      
+
      # Consolidate values into a nutrient name key
      saved_settings$nutrient_key <- nutrData$nutrient_names %>%
        mutate(Selected_nutrient = selected_nutrients)
+     print(saved_settings$nutrient_key)
 
 
      # Apply selected values to raw data
      nutrData$preconversion_data <- as.data.frame(nutrData$pivot_data) %>%
        left_join(saved_settings$nutrient_key, by = "Nutrient") %>%
-       mutate(Selected_nutrient = ifelse(is.na(Selected_nutrient), "No match", Selected_nutrient)) %>%
-       filter(Selected_nutrient != "IGNORE")
-     
+       mutate(Nutrient = ifelse(is.na(Selected_nutrient), "No match", Selected_nutrient)) %>%
+       select(-Selected_nutrient) %>%
+       filter(Nutrient != "IGNORE")
+
      # Setup conversion table data
      nutrData$conversion_table_data <- nutrData$preconversion_data %>%
        distinct(Nutrient, .keep_all = TRUE) %>%
        select(Nutrient, `Desc 4`, Value) %>%
        left_join(constants, by = "Nutrient") %>%
-       mutate(
-         `Expected Unit` = Units,
-         `Conversion Multiplier` = NA,    
-         `Converted Value` = NA                  
-       ) %>%
-       select(Nutrient, `Desc 4`, Value, `Expected Unit`, 
-              `Conversion Multiplier`, `Converted Value`)
+       select(Nutrient, `Desc 4`, Value, Units)
+     print(nutrData$conversion_table_data)
      
      
      updateTabItems(session, "sidebar", selected = "unit_conversions")
@@ -255,13 +270,65 @@ server <- function(input, output, session) {
    
    # Unit Conversion ---------------------------------------------------
    
+     # Sample data
+     nutrient_data <- reactive({
+       data.frame(
+         Nutrient = c("Protein", "Carbs"),
+         Description = c("Muscle building", "Energy source"),
+         Value = c(10, 20),
+         Unit = c("g", "g"),
+         stringsAsFactors = FALSE
+       )
+     })
+     
+     # Generate form fields dynamically
+     output$nutrient_forms <- renderUI({
+       req(nutrData$conversion_table_data)
+       data <- nutrData$conversion_table_data
+       
+       lapply(seq_len(nrow(data)), function(i) {
+         fluidRow(
+           column(2, strong(data$Nutrient[i])),
+           column(2, data$`Desc 4`[i]),
+           column(2, data$Value[i]),
+           column(1, data$Units[i]),
+           column(2, numericInput(
+             inputId = paste0("mult_", i),
+             label = NULL,
+             value = 1,
+             min = 0,
+             step = 0.1
+           )),
+           column(2, verbatimTextOutput(paste0("converted_", i)))
+         )
+       })
+     })
+     
+     # Compute converted values
+     observe({
+       req(nutrData$conversion_table_data)
+       data <- nutrData$conversion_table_data
+       lapply(seq_len(nrow(data)), function(i) {
+         output[[paste0("converted_", i)]] <- renderText({
+           mult <- input[[paste0("mult_", i)]] %||% 0
+           result <- data$Value[i] * mult
+           sprintf("%.2f %s", result, data$Units[i])
+         })
+       })
+     })
+   
+   
    output$conversionTable <- renderDT({
      req(nutrData$conversion_table_data)
      
      datatable(
        nutrData$conversion_table_data,
        editable = list(target = "cell", columns = c(5)), 
-       options = list(pageLength = 10),
+       options = list(pageLength = 10,
+       columnDefs = list(
+         list(targets = 5, className = "editable")  # Apply your CSS class to column index 5 (0-based)
+          )
+       )
      )
    })
    
