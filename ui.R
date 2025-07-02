@@ -6,6 +6,7 @@ library(DT)
 library(bslib)
 library(shinydashboard)
 library(shiny.fluent)
+library(shinyjs)
 
 # UPLOAD DATA TAB
 upload_data_content <- fluidPage(
@@ -51,8 +52,8 @@ metadata_content <- fluidPage(
     ),
   
   actionButton('check_metadata', 'Check Selection'),
-  actionButton('save_metadata', 'Save and Continue'),
-  )
+  actionButton('save_metadata', 'Save and Continue')
+)
 
 #NUTRIENT NAMES TAB
 nutrient_names_content <- fluidPage(
@@ -121,7 +122,9 @@ review_content <- fluidPage(
 )
 
 
-ui_nav <- dashboardPage(
+ui <- dashboardPage(
+
+  
   dashboardHeader(
     title = "Convert Zoo Diet Data"),
   
@@ -136,22 +139,40 @@ ui_nav <- dashboardPage(
       menuItem("Unit Conversions", tabName = "unit_conversions", icon = icon("exchange-alt")),
       menuItem("Review and Download", tabName = "review_download", icon = icon("download")),
       menuItem("Help", icon = icon("question-circle"),
-               menuSubItem("Conversion Example", tabName = "conversion_example"),
-               menuSubItem("Zoo Diet Docs", tabName = "zoo_docs"))
+               # menuSubItem("Conversion Example", tabName = "conversion_example"),
+               menuSubItem("Zoo Diet Docs", href = "https://zoodiets.com/user-guide/"))
     )
   ),
   
   dashboardBody(
+    useShinyjs(),
     includeCSS("www/styles.css"),
+    
+    # allow disabled tabs
+    tags$script(HTML("
+  Shiny.addCustomMessageHandler('disableTabs', function(disabledTabs) {
+    $('.sidebar-menu li a').each(function() {
+      const tabText = $(this).text().trim();
+      if (disabledTabs.includes(tabText)) {
+        $(this).addClass('disabled-tab');
+        $(this).css('pointer-events', 'none');
+        $(this).css('opacity', '0.5');
+      } else {
+        $(this).removeClass('disabled-tab');
+        $(this).css('pointer-events', '');
+        $(this).css('opacity', '');
+      }
+    });
+  });
+")),
     
     tabItems(
       tabItem(tabName = "upload_data", upload_data_content),
       tabItem(tabName = "meta_data", metadata_content),
       tabItem(tabName = "nutrient_names", nutrient_names_content),
       tabItem(tabName = "unit_conversions", unit_conversion_content),
-      tabItem(tabName = "review_download", review_content),
-      tabItem(tabName = "conversion_example", h3("Data Conversion Example")),
-      tabItem(tabName = "zoo_docs", h3(a("Zoo Diet Docs", href = "https://zoodiets.com/user-guide/", target = "_blank")))
+      tabItem(tabName = "review_download", review_content)
+      # tabItem(tabName = "conversion_example", h3("Data Conversion Example"))
     )
   )
 )
@@ -161,27 +182,7 @@ ui_nav <- dashboardPage(
   
 
 
-# ui_clean <- sidebarLayout(
-#   sidebarPanel(
-#     checkboxInput("DAK", "Does this dataset contain zoo sample ID numbers (within the D1 descriptions)?", value = FALSE),
-# 
-#   ),
-#   mainPanel(
-#     h3("Cleaned data ready for ZDN"),
-#     tableOutput("preview2")
-#   )
-# )
 
 
 
-ui_download <- fluidRow(
-  column(width = 12, downloadButton("download", class = "btn-block",  style="color: #fff; background-color: #337ab7; border-color: #2e6da4"))
-)
 
-ui <- fluidPage(
-  # titlePanel(HTML(paste0("Convert ", "<b>","Dairy One","</b> ", " to ", "<b>","Zoo Diets NaviGator","</b>"))),
-  ui_nav,
-  # ui_upload,
-  # ui_clean,
-  # ui_download
-)

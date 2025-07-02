@@ -39,3 +39,7 @@ table.dataTable td.editable {
 .metadata-dropdown {
   width: 150px; 
 }
+
+.disabled-tab {
+  cursor: not-allowed !important;
+}
