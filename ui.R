@@ -118,6 +118,7 @@ review_content <- fluidPage(
   h3("Review Converted Data"),
   div(class = 'table', DTOutput('convertedTable')),
   downloadButton('download', 'Download Data'),
+  actionButton('return', 'Upload A New File')
   
 )
 

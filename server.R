@@ -498,4 +498,24 @@ server <- function(input, output, session) {
       writexl::write_xlsx(as.data.frame(nutrData$converted_data), file)
     }
   )
+   # Restart -------------------------------------------------------
+  observeEvent(input$return, {
+    step_complete$file_upload <- FALSE
+    step_complete$upload_data <- FALSE
+    step_complete$meta_data <- FALSE
+    step_complete$check_metadata <- FALSE
+    step_complete$nutrient_names <- FALSE
+    step_complete$unit_conversions <- FALSE
+    
+    nutrData$raw <- NULL
+    nutrData$metadata <- NULL
+    nutrData$pivot_data <- NULL
+    nutrData$nutrient_names <- NULL
+    nutrData$preconversion_data <- NULL
+    nutrData$conversion_table_data <- NULL
+    nutrData$converted_data <- NULL
+    nutrData$selected_columns <- NULL
+  
+    updateTabItems(session, "sidebar", selected = "upload_data")
+  })
 }
