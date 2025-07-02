@@ -153,7 +153,6 @@ ui <- dashboardPage(
   Shiny.addCustomMessageHandler('disableTabs', function(disabledTabs) {
     $('.sidebar-menu li a').each(function() {
       const tabText = $(this).text().trim();
-    console.log(tabText, disabledTabs.includes(tabText))
       if (disabledTabs.includes(tabText)) {
         $(this).addClass('disabled-tab');
         $(this).css('pointer-events', 'none');

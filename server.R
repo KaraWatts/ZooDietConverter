@@ -49,8 +49,7 @@ server <- function(input, output, session) {
   
   # Control Tab Navigation Access
   observe({
-    print(step_complete$unit_conversions)
-    
+
     disabled <- c()
     if (!step_complete$upload_data) disabled <- c(disabled, "Meta Data")
     if (!step_complete$meta_data) disabled <- c(disabled, "Nutrient Names")
