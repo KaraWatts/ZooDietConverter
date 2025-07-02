@@ -12,7 +12,10 @@ library(tidyverse)
 library(readxl)
 library(writexl)
 library(lubridate)
+
 constants <- read_excel("constants.xlsx")
+options(shiny.launch.browser = TRUE)
+
 
 server <- function(input, output, session) {
   metaDataHeaders <- c("Sample Date", "External LabID", "Internal LabID", "Desc 1", "Desc 2", "Desc 3", "Desc 4")
@@ -36,6 +39,46 @@ server <- function(input, output, session) {
     First_Nutrient_Listed = NULL
   )
   
+  step_complete <- reactiveValues(
+    file_upload = FALSE,
+    upload_data = FALSE,
+    meta_data = FALSE,
+    check_metadata = FALSE,
+    nutrient_names = FALSE,
+    unit_conversions = FALSE    )
+  
+  # Control Tab Navigation Access
+  observe({
+    print(step_complete$unit_conversions)
+    
+    disabled <- c()
+    if (!step_complete$upload_data) disabled <- c(disabled, "Meta Data")
+    if (!step_complete$meta_data) disabled <- c(disabled, "Nutrient Names")
+    if (!step_complete$nutrient_names) disabled <- c(disabled, "Unit Conversions")
+    if (!step_complete$unit_conversions) disabled <- c(disabled, "Review and Download")
+    
+    
+    session$sendCustomMessage("disableTabs", disabled %||% character(0))
+  })
+  
+  #Control Save Button Access
+  observe({
+    ## file must be uploaded first
+    if (step_complete$file_upload) {
+      shinyjs::enable("save_upload")
+    } else {
+      shinyjs::disable("save_upload")
+    }
+    ## Check metaData must be clicked first
+    if (step_complete$check_metadata) {
+      shinyjs::enable("save_metadata")
+    } else {
+      shinyjs::disable("save_metadata")
+    }
+    
+  })
+
+  
   # Upload data ---------------------------------------------------------
   observeEvent(input$file, {
     req(input$file)
@@ -43,6 +86,8 @@ server <- function(input, output, session) {
     nutrData$raw <- read_csv(input$file$datapath, 
                              na = "not requested")
     print("Data read successfully!")
+    step_complete$file_upload <- TRUE
+    
     
     # Render Raw Data Table
     output$rawTable <- renderDT({
@@ -66,6 +111,7 @@ server <- function(input, output, session) {
   # Save Uploaded Data
   observeEvent(input$save_upload, {
     req(nutrData$raw)
+    step_complete$upload_data <- TRUE
     updateTabItems(session, "sidebar", selected = "meta_data")
   })
   
@@ -74,6 +120,7 @@ server <- function(input, output, session) {
   # DROPDOWN MENUS
   output$metadata_dropdowns <- renderUI({
     req(nutrData$raw)
+    
     
     # Create dropdowns for each specific title
     dropdowns <- lapply(c(metaDataHeaders, "First Nutrient Listed"), function(title) {
@@ -94,6 +141,8 @@ server <- function(input, output, session) {
   # METADATA TABLE
   observeEvent(input$check_metadata, {
     req(nutrData$raw) 
+    
+    step_complete$check_metadata <- TRUE
     
     selected_columns <- c(
       input$dropdown_Sample_Date,
@@ -160,6 +209,8 @@ server <- function(input, output, session) {
       ) %>%
       drop_na(Value) %>%
       select(-value)
+    
+    step_complete$meta_data <- TRUE
     updateTabItems(session, "sidebar", selected = "nutrient_names")
   })
   
@@ -217,6 +268,7 @@ server <- function(input, output, session) {
       escape = FALSE,
       select = "none",
       options = list(
+        destroy = TRUE,
         pageLength = 50,
         columnDefs = list(
           list(targets = "_all", className = "dt-center"),
@@ -278,6 +330,9 @@ server <- function(input, output, session) {
          `Converted Value` = Value * Multiplier
        ) %>%
        select(-Unit.y, -Unit.x)
+     
+     step_complete$nutrient_names <- TRUE
+     
 
      updateTabItems(session, "sidebar", selected = "unit_conversions")
    })
@@ -337,8 +392,10 @@ server <- function(input, output, session) {
      datatable(
        nutrData$conversion_table_data,
        editable = list(target = "cell", columns = c(5)), 
-       options = list(pageLength = 10,
-       columnDefs = list(
+       options = list(
+         destroy = TRUE,
+         pageLength = 10,
+         columnDefs = list(
          list(targets = 5, className = "editable")  # Apply your CSS class to column index 5 (0-based)
           )
        ),
@@ -412,10 +469,14 @@ server <- function(input, output, session) {
        select(-Multiplier) 
 
       
-
+     step_complete$unit_conversions <- TRUE
+     
      
      updateTabItems(session, "sidebar", selected = "review_download")
    })
+   
+   
+   
   # Review --------------------------------------------------------
    output$convertedTable <- renderDT({
      req(nutrData$converted_data)
