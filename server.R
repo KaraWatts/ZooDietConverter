@@ -21,7 +21,8 @@ server <- function(input, output, session) {
   
   saved_settings <- reactiveValues(
     nutrient_key = NULL,
-    metadata_key = NULL
+    metadata_key = NULL,
+    conversion_key = NULL
   )
   
   saved_metadata_values <- reactiveValues(
@@ -103,8 +104,7 @@ server <- function(input, output, session) {
       input$dropdown_Desc_3,
       input$dropdown_Desc_4
     )
-    print(selected_columns)
-    
+
     # Store the selected columns in reactiveValues
     saved_metadata_values$Sample_Date <- input$dropdown_Sample_Date
     saved_metadata_values$External_LabID <- input$dropdown_External_LabID
@@ -151,13 +151,15 @@ server <- function(input, output, session) {
   # NAVIGATE TO NUTRIENT NAMES
   observeEvent(input$save_metadata, {
     req(nutrData$metadata)
+    saved_settings$metadate_key <- saved_metadata_values
     nutrData$pivot_data <- nutrData$metadata %>%
       pivot_longer(cols = saved_metadata_values$First_Nutrient_Listed:last_col(), names_to = "Nutrient", values_to = "value") %>%
       mutate(
         Value = as.numeric(value),
         `Sample Date` = parse_date(`Sample Date`, "%m/%d/%Y")
       ) %>%
-      drop_na(value)
+      drop_na(Value) %>%
+      select(-value)
     updateTabItems(session, "sidebar", selected = "nutrient_names")
   })
   
@@ -179,11 +181,6 @@ server <- function(input, output, session) {
 
     nutrData$nutrient_names <- nutrient_names
     
-    print("SELECTED NUTS")
-    print(selected_nutrients)
-    
-    print("NUT NAMES")
-    print(nutrient_names)
 
     # Create Dropdown menu and add it to each row
     nutrient_names$Nutrient_selector <- vapply(seq_len(nrow(nutrient_names)), function(i) {
@@ -246,7 +243,6 @@ server <- function(input, output, session) {
      # Consolidate values into a nutrient name key
      saved_settings$nutrient_key <- nutrData$nutrient_names %>%
        mutate(Selected_nutrient = selected_nutrients)
-     print(saved_settings$nutrient_key)
 
 
      # Apply selected values to raw data
@@ -255,35 +251,44 @@ server <- function(input, output, session) {
        mutate(Nutrient = ifelse(is.na(Selected_nutrient), "No match", Selected_nutrient)) %>%
        select(-Selected_nutrient) %>%
        filter(Nutrient != "IGNORE")
+     
+     
 
      # Setup conversion table data
      nutrData$conversion_table_data <- nutrData$preconversion_data %>%
        distinct(Nutrient, .keep_all = TRUE) %>%
        select(Nutrient, `Desc 4`, Value) %>%
-       left_join(constants, by = "Nutrient") %>%
-       select(Nutrient, `Desc 4`, Value, Units)
-     print(nutrData$conversion_table_data)
+       left_join(constants, by = "Nutrient") 
      
-     
+
+     #Set default conversion key
+     if (is.null(saved_settings$conversion_key)) {
+       data <- nutrData$conversion_table_data
+       saved_settings$conversion_key <- data.frame(
+         Nutrient = as.character(data$Nutrient),
+         Multiplier = rep(1, nrow(data)),
+         Unit = as.character(data$Unit),
+         stringsAsFactors = FALSE
+       )
+     }
+     nutrData$conversion_table_data <- nutrData$conversion_table_data %>%
+       left_join(saved_settings$conversion_key, by = "Nutrient") %>%
+       mutate(
+         Unit = Unit.x,
+         `Converted Value` = Value * Multiplier
+       ) %>%
+       select(-Unit.y, -Unit.x)
+
      updateTabItems(session, "sidebar", selected = "unit_conversions")
    })
    
    # Unit Conversion ---------------------------------------------------
    
-     # Sample data
-     nutrient_data <- reactive({
-       data.frame(
-         Nutrient = c("Protein", "Carbs"),
-         Description = c("Muscle building", "Energy source"),
-         Value = c(10, 20),
-         Unit = c("g", "g"),
-         stringsAsFactors = FALSE
-       )
-     })
      
      # Generate form fields dynamically
      output$nutrient_forms <- renderUI({
        req(nutrData$conversion_table_data)
+       
        data <- nutrData$conversion_table_data
        
        lapply(seq_len(nrow(data)), function(i) {
@@ -291,11 +296,17 @@ server <- function(input, output, session) {
            column(2, strong(data$Nutrient[i])),
            column(2, data$`Desc 4`[i]),
            column(2, data$Value[i]),
-           column(1, data$Units[i]),
+           column(2, data$Unit[i]),
+           # column(2, selectInput(
+           #   inputId = paste0("form_", i),
+           #   label = NULL,
+           #   choices = c("As Fed", "Dry Matter"),
+           #   selected = "As Fed"
+           # )),
            column(2, numericInput(
              inputId = paste0("mult_", i),
              label = NULL,
-             value = 1,
+             value = saved_settings$conversion_key$Multiplier[i],
              min = 0,
              step = 0.1
            )),
@@ -303,6 +314,8 @@ server <- function(input, output, session) {
          )
        })
      })
+   
+
      
      # Compute converted values
      observe({
@@ -312,7 +325,7 @@ server <- function(input, output, session) {
          output[[paste0("converted_", i)]] <- renderText({
            mult <- input[[paste0("mult_", i)]] %||% 0
            result <- data$Value[i] * mult
-           sprintf("%.2f %s", result, data$Units[i])
+           sprintf("%.2f %s", result, data$Unit[i])
          })
        })
      })
@@ -328,24 +341,48 @@ server <- function(input, output, session) {
        columnDefs = list(
          list(targets = 5, className = "editable")  # Apply your CSS class to column index 5 (0-based)
           )
-       )
+       ),
      )
    })
+
    
    observeEvent(input$conversionTable_cell_edit, {
      convertData <- input$conversionTable_cell_edit
      
-     if (convertData$col == 4) {  
-       
-       row <- convertData$row + 1   
+     if (convertData$col == 4) {  # Conversion Multiplier column (index 4 = 5th column)
+       row <- convertData$row + 1
        new_multiplier <- as.numeric(convertData$value)
        
-       # Update the conversion_table_data
+       # Extract as characters
+       nutrient <- as.character(nutrData$conversion_table_data[row, "Nutrient"])
+       unit <- as.character(nutrData$conversion_table_data[row, "Unit"])
+       
+       # Update the table data
        nutrData$conversion_table_data[row, "Conversion Multiplier"] <<- new_multiplier
        nutrData$conversion_table_data[row, "Converted Value"] <<- 
          nutrData$conversion_table_data[row, "Value"] * new_multiplier
        
-       # Replace data in the table
+       # Update the saved_settings$conversion_key correctly
+       if (!is.null(saved_settings$conversion_key)) {
+         existing_index <- which(saved_settings$conversion_key$Nutrient == nutrient)
+         
+         if (length(existing_index) == 1) {
+           saved_settings$conversion_key[existing_index, "Multiplier"] <- new_multiplier
+           saved_settings$conversion_key[existing_index, "Unit"] <- unit
+         } else {
+           saved_settings$conversion_key <- rbind(
+             saved_settings$conversion_key,
+             data.frame(
+               Nutrient = nutrient,
+               Multiplier = new_multiplier,
+               Unit = unit,
+               stringsAsFactors = FALSE
+             )
+           )
+         }
+       }
+       
+       # Refresh table view
        replaceData(
          proxy = dataTableProxy('conversionTable'),
          data = nutrData$conversion_table_data,
@@ -353,15 +390,52 @@ server <- function(input, output, session) {
        )
      }
    })
-  
-  
+
+   # SAVE CONVERSION MULTIPLIERS AND NAV TO REVIEW AND DOWNLOAD
+   observeEvent(input$save_conversions, {
+     req(nutrData$conversion_table_data)
+     
+     for (i in seq_len(nrow(saved_settings$conversion_key))) {
+       input_id <- paste0("mult_", i)
+       if (!is.null(input[[input_id]])) {
+         saved_settings$conversion_key$Multiplier[i] <- input[[input_id]]
+       }
+     }
+     
+
+     nutrData$converted_data <-nutrData$preconversion_data %>%
+       left_join(saved_settings$conversion_key, by = "Nutrient") %>%
+       mutate(
+         Value = as.numeric(Value) * Multiplier,
+         Unit = Unit
+       ) %>%
+       select(-Multiplier) 
+
+      
+
+     
+     updateTabItems(session, "sidebar", selected = "review_download")
+   })
+  # Review --------------------------------------------------------
+   output$convertedTable <- renderDT({
+     req(nutrData$converted_data)
+     
+     datatable(
+       nutrData$converted_data,
+       options = list(
+         pageLength = 10,
+         scrollX = TRUE
+       )
+     )
+   })
   # Download -------------------------------------------------------
   output$download <- downloadHandler(
     filename = function() {
       paste0(tools::file_path_sans_ext(input$file$name), "-ready4ZDN", ".xlsx")
     },
     content = function(file) {
-      writexl::write_xlsx(as_fed(), file)
+      req(nutrData$converted_data)
+      writexl::write_xlsx(as.data.frame(nutrData$converted_data), file)
     }
   )
 }

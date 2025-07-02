@@ -73,7 +73,7 @@ unit_conversion_content <- fluidPage(
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     margin-top: 20px;
     margin-bottom: 20px;
-    width: 90%;
+    width: 100%;
   }
     .form-row {
       margin-bottom: 10px;
@@ -95,8 +95,9 @@ unit_conversion_content <- fluidPage(
   fluidRow(
     column(2, div(class = "form-header", "Nutrient")),
     column(2, div(class = "form-header", "Description")),
-    column(2, div(class = "form-header", "Sample Value")),
-    column(1, div(class = "form-header", "Unit")),
+    column(2, div(class = "form-header", "Sample")),
+    column(2, div(class = "form-header", "Convert to")),
+    # column(2, div(class = "form-header", "Form")),
     column(2, div(class = "form-header", "Conversion Multiplier")),
     column(2, div(class = "form-header", "Converted Value"))
   ),
@@ -105,7 +106,17 @@ unit_conversion_content <- fluidPage(
   uiOutput("nutrient_forms"),
       
       ),
-  actionButton('save_units', 'Save and Continue'),
+
+  actionButton('save_conversions', 'Save and Continue'),
+  
+)
+
+#REVIEW AND DOWNLOAD TAB
+review_content <- fluidPage(
+  
+  h3("Review Converted Data"),
+  div(class = 'table', DTOutput('convertedTable')),
+  downloadButton('download', 'Download Data'),
   
 )
 
@@ -138,7 +149,7 @@ ui_nav <- dashboardPage(
       tabItem(tabName = "meta_data", metadata_content),
       tabItem(tabName = "nutrient_names", nutrient_names_content),
       tabItem(tabName = "unit_conversions", unit_conversion_content),
-      tabItem(tabName = "review_download", h3("Review Data Conversion")),
+      tabItem(tabName = "review_download", review_content),
       tabItem(tabName = "conversion_example", h3("Data Conversion Example")),
       tabItem(tabName = "zoo_docs", h3(a("Zoo Diet Docs", href = "https://zoodiets.com/user-guide/", target = "_blank")))
     )
