@@ -12,7 +12,7 @@ This project follows a [Code of Conduct](CODE_OF_CONDUCT.md). All contributors a
 ## 🧰 Local Development Setup
 
 1. **Fork this repository**  
-   Go to [ZooDietConverter](https://github.com/KaraWatts/ZooDietConverter) and click **Fork** to create your own copy.
+   Go to [ZooDietConverter dev branch](https://github.com/KaraWatts/ZooDietConverter/tree/dev) and click **Fork** to create your own copy.
 
 2. **Clone your fork**
    ```bash
@@ -75,9 +75,16 @@ This project follows a [Code of Conduct](CODE_OF_CONDUCT.md). All contributors a
 
 5. **Create a Pull Request**
 
-   * Go to the original repo on GitHub.
-   * Click **New Pull Request** and select your branch.
-   * Describe the changes clearly and reference related issues if applicable.
+   ## 🔀 Create a Pull Request
+
+   1. Go to your forked repository on GitHub.
+   2. Click the green **"Compare & pull request"** button.
+   3. On the **Open a pull request** page, set the base and compare branches using the dropdown menus:
+   **base: dev ← compare: your-branch-name**
+   4. Add a clear title and description summarizing your changes including screenshots if making UI changes.
+   5. Click **"Create pull request"** to submit.
+
+   Your PR will be reviewed and discussed before being merged. Please be open to feedback!
 
 ---
 
