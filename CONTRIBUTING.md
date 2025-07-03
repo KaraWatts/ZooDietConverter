@@ -49,13 +49,17 @@ This project follows a [Code of Conduct](CODE_OF_CONDUCT.md). All contributors a
 
 
 ---
+Absolutely! Here's your **reformatted and cohesive version** of the *"Making a Contribution"* and *"Create a Pull Request"* sections with consistent markdown structure and indentation:
+
+---
+
 ## ✅ Making a Contribution
 
 1. **Create a feature branch**
 
    ```bash
    git checkout -b feature/your-feature-name
-   ```
+
 
 2. **Make your changes**
    Ensure your code is clean, commented, and tested locally.
@@ -75,16 +79,20 @@ This project follows a [Code of Conduct](CODE_OF_CONDUCT.md). All contributors a
 
 5. **Create a Pull Request**
 
-   ## 🔀 Create a Pull Request
+   * Go to your forked repository on GitHub.
+   * Click the green **"Compare & pull request"** button.
+   * On the **Open a pull request** page, set the branches:
 
-   1. Go to your forked repository on GitHub.
-   2. Click the green **"Compare & pull request"** button.
-   3. On the **Open a pull request** page, set the base and compare branches using the dropdown menus:
-   **base: dev ← compare: your-branch-name**
-   4. Add a clear title and description summarizing your changes including screenshots if making UI changes.
-   5. Click **"Create pull request"** to submit.
+     ```
+     base: dev ← compare: your-branch-name
+     ```
+   * Add a clear title and description summarizing your changes.
 
-   Your PR will be reviewed and discussed before being merged. Please be open to feedback!
+     * If you're making UI changes, include before/after screenshots.
+   * Click **"Create pull request"** to submit.
+
+Your PR will be reviewed and discussed before being merged. Please be open to feedback!
+
 
 ---
 
