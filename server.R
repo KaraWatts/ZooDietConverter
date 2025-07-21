@@ -80,6 +80,45 @@ server <- function(input, output, session) {
 
   
   # Upload data ---------------------------------------------------------
+  
+  # Settings file upload handler
+  observeEvent(input$settings_file, {
+    req(input$settings_file)
+    
+    tryCatch({
+      # Read the settings file
+      settings_data <- readRDS(input$settings_file$datapath)
+      
+      # Validate that it contains the expected structure
+      if (!is.list(settings_data) || 
+          !all(c("saved_settings", "saved_metadata_values") %in% names(settings_data))) {
+        showNotification("Invalid settings file format.", type = "error")
+        return()
+      }
+      
+      # Load the settings
+      saved_settings$nutrient_key <- settings_data$saved_settings$nutrient_key
+      saved_settings$metadata_key <- settings_data$saved_settings$metadata_key
+      saved_settings$conversion_key <- settings_data$saved_settings$conversion_key
+      saved_settings$conversion_method <- settings_data$saved_settings$conversion_method %||% "No Conversion (Already As-Fed)"
+      
+      # Load metadata values
+      saved_metadata_values$Sample_Date <- settings_data$saved_metadata_values$Sample_Date
+      saved_metadata_values$External_LabID <- settings_data$saved_metadata_values$External_LabID
+      saved_metadata_values$Internal_LabID <- settings_data$saved_metadata_values$Internal_LabID
+      saved_metadata_values$Desc_1 <- settings_data$saved_metadata_values$Desc_1
+      saved_metadata_values$Desc_2 <- settings_data$saved_metadata_values$Desc_2
+      saved_metadata_values$Desc_3 <- settings_data$saved_metadata_values$Desc_3
+      saved_metadata_values$Desc_4 <- settings_data$saved_metadata_values$Desc_4
+      saved_metadata_values$First_Nutrient_Listed <- settings_data$saved_metadata_values$First_Nutrient_Listed
+      
+      showNotification("Settings loaded successfully! The app will use your saved configuration for metadata mapping, nutrient names, and conversion settings.", 
+                      type = "message", duration = 5)
+    }, error = function(e) {
+      showNotification(paste("Error loading settings file:", e$message), type = "error")
+    })
+  })
+  
   observeEvent(input$file, {
     req(input$file)
     print("File uploaded, reading data...")
@@ -313,7 +352,7 @@ server <- function(input, output, session) {
        left_join(constants, by = "Nutrient") 
      
 
-     #Set default conversion key
+     #Set default conversion key or merge with existing
      if (is.null(saved_settings$conversion_key)) {
        data <- nutrData$conversion_table_data
        saved_settings$conversion_key <- data.frame(
@@ -322,11 +361,35 @@ server <- function(input, output, session) {
          Unit = as.character(data$Unit),
          stringsAsFactors = FALSE
        )
+     } else {
+       # If we have a saved conversion_key, make sure it covers all current nutrients
+       data <- nutrData$conversion_table_data
+       current_nutrients <- as.character(data$Nutrient)
+       saved_nutrients <- as.character(saved_settings$conversion_key$Nutrient)
+       
+       # Add any new nutrients that weren't in the saved settings
+       new_nutrients <- setdiff(current_nutrients, saved_nutrients)
+       if (length(new_nutrients) > 0) {
+         new_data <- data[data$Nutrient %in% new_nutrients, ]
+         new_key_rows <- data.frame(
+           Nutrient = as.character(new_data$Nutrient),
+           Multiplier = rep(1, nrow(new_data)),
+           Unit = as.character(new_data$Unit),
+           stringsAsFactors = FALSE
+         )
+         saved_settings$conversion_key <- rbind(saved_settings$conversion_key, new_key_rows)
+       }
+       
+       # Remove any nutrients that are no longer present
+       saved_settings$conversion_key <- saved_settings$conversion_key[
+         saved_settings$conversion_key$Nutrient %in% current_nutrients, 
+       ]
      }
      nutrData$conversion_table_data <- nutrData$conversion_table_data %>%
        left_join(saved_settings$conversion_key, by = "Nutrient") %>%
        mutate(
-         Unit = Unit.x,
+         Unit = ifelse(is.na(Unit.y), Unit.x, Unit.y),
+         Multiplier = ifelse(is.na(Multiplier), 1, Multiplier),
          `Converted Value` = Value * Multiplier
        ) %>%
        select(-Unit.y, -Unit.x)
@@ -436,6 +499,13 @@ server <- function(input, output, session) {
        data <- nutrData$conversion_table_data
        
        lapply(seq_len(nrow(data)), function(i) {
+         # Get the nutrient name for this row
+         nutrient_name <- as.character(data$Nutrient[i])
+         
+         # Find the corresponding multiplier from the conversion_key
+         conversion_row <- saved_settings$conversion_key[saved_settings$conversion_key$Nutrient == nutrient_name, ]
+         current_multiplier <- if (nrow(conversion_row) > 0) conversion_row$Multiplier[1] else 1
+         
          # Add label to show what the sample value represents
          sample_label <- if(saved_settings$conversion_method == "Convert from Dry Matter to As-Fed") {
            "Sample (As-Fed Preview)"
@@ -456,7 +526,7 @@ server <- function(input, output, session) {
            column(2, numericInput(
              inputId = paste0("mult_", i),
              label = NULL,
-             value = saved_settings$conversion_key$Multiplier[i],
+             value = current_multiplier,
              min = 0,
              step = 0.1
            )),
@@ -517,24 +587,22 @@ server <- function(input, output, session) {
        nutrData$conversion_table_data[row, "Converted Value"] <<- 
          nutrData$conversion_table_data[row, "Value"] * new_multiplier
        
-       # Update the saved_settings$conversion_key correctly
-       if (!is.null(saved_settings$conversion_key)) {
-         existing_index <- which(saved_settings$conversion_key$Nutrient == nutrient)
-         
-         if (length(existing_index) == 1) {
-           saved_settings$conversion_key[existing_index, "Multiplier"] <- new_multiplier
-           saved_settings$conversion_key[existing_index, "Unit"] <- unit
-         } else {
-           saved_settings$conversion_key <- rbind(
-             saved_settings$conversion_key,
-             data.frame(
-               Nutrient = nutrient,
-               Multiplier = new_multiplier,
-               Unit = unit,
-               stringsAsFactors = FALSE
-             )
+       # Update the saved_settings$conversion_key
+       existing_index <- which(saved_settings$conversion_key$Nutrient == nutrient)
+       
+       if (length(existing_index) == 1) {
+         saved_settings$conversion_key[existing_index, "Multiplier"] <- new_multiplier
+         saved_settings$conversion_key[existing_index, "Unit"] <- unit
+       } else {
+         saved_settings$conversion_key <- rbind(
+           saved_settings$conversion_key,
+           data.frame(
+             Nutrient = nutrient,
+             Multiplier = new_multiplier,
+             Unit = unit,
+             stringsAsFactors = FALSE
            )
-         }
+         )
        }
        
        # Refresh table view
@@ -550,10 +618,18 @@ server <- function(input, output, session) {
    observeEvent(input$save_conversions, {
      req(nutrData$conversion_table_data)
      
-     for (i in seq_len(nrow(saved_settings$conversion_key))) {
+     # Update conversion_key from the current table data multipliers
+     for (i in seq_len(nrow(nutrData$conversion_table_data))) {
        input_id <- paste0("mult_", i)
        if (!is.null(input[[input_id]])) {
-         saved_settings$conversion_key$Multiplier[i] <- input[[input_id]]
+         # Get the nutrient name for this row
+         nutrient_name <- as.character(nutrData$conversion_table_data$Nutrient[i])
+         
+         # Find and update the corresponding row in conversion_key
+         conversion_index <- which(saved_settings$conversion_key$Nutrient == nutrient_name)
+         if (length(conversion_index) > 0) {
+           saved_settings$conversion_key$Multiplier[conversion_index[1]] <- input[[input_id]]
+         }
        }
      }
      
@@ -598,6 +674,9 @@ server <- function(input, output, session) {
       
      step_complete$unit_conversions <- TRUE
      
+     # Show notification about saving settings
+     showNotification("Data conversion complete! Don't forget to save your settings for future use.", 
+                     type = "message", duration = 5)
      
      updateTabItems(session, "sidebar", selected = "review_download")
    })
@@ -624,6 +703,58 @@ server <- function(input, output, session) {
     content = function(file) {
       req(nutrData$converted_data)
       writexl::write_xlsx(as.data.frame(nutrData$converted_data), file)
+    }
+  )
+  
+  # Download settings handler
+  output$download_settings <- downloadHandler(
+    filename = function() {
+      paste0("ZooDietConverter_Settings_", Sys.Date(), ".rds")
+    },
+    content = function(file) {
+      # Ensure we capture the latest multiplier values before saving
+      if (!is.null(nutrData$conversion_table_data) && !is.null(saved_settings$conversion_key)) {
+        for (i in seq_len(nrow(nutrData$conversion_table_data))) {
+          input_id <- paste0("mult_", i)
+          if (!is.null(input[[input_id]])) {
+            # Get the nutrient name for this row
+            nutrient_name <- as.character(nutrData$conversion_table_data$Nutrient[i])
+            
+            # Find and update the corresponding row in conversion_key
+            conversion_index <- which(saved_settings$conversion_key$Nutrient == nutrient_name)
+            if (length(conversion_index) > 0) {
+              saved_settings$conversion_key$Multiplier[conversion_index[1]] <- input[[input_id]]
+            }
+          }
+        }
+      }
+      
+      # Create a list with all relevant settings
+      settings_to_save <- list(
+        saved_settings = list(
+          nutrient_key = saved_settings$nutrient_key,
+          metadata_key = saved_settings$metadata_key,
+          conversion_key = saved_settings$conversion_key,
+          conversion_method = saved_settings$conversion_method
+        ),
+        saved_metadata_values = list(
+          Sample_Date = saved_metadata_values$Sample_Date,
+          External_LabID = saved_metadata_values$External_LabID,
+          Internal_LabID = saved_metadata_values$Internal_LabID,
+          Desc_1 = saved_metadata_values$Desc_1,
+          Desc_2 = saved_metadata_values$Desc_2,
+          Desc_3 = saved_metadata_values$Desc_3,
+          Desc_4 = saved_metadata_values$Desc_4,
+          First_Nutrient_Listed = saved_metadata_values$First_Nutrient_Listed
+        ),
+        # Add metadata for the settings file
+        created_date = Sys.time(),
+        app_version = "1.0",
+        description = "ZooDiet Data Converter settings including metadata mappings, nutrient name mappings, unit conversion multipliers, and conversion method preferences."
+      )
+      
+      # Save as RDS file
+      saveRDS(settings_to_save, file)
     }
   )
    # Restart -------------------------------------------------------
