@@ -89,14 +89,14 @@ unit_conversion_content <- fluidPage(
     }
   ")),
 
-  h3("Provide Conversion Values for All Units"),
-  # div(class = 'table', DTOutput('conversionTable')),
+  h3("Unit Conversions & Data Format"),
+  
   # Table headers
   div(class="form-box",
   fluidRow(
     column(2, div(class = "form-header", "Nutrient")),
     column(2, div(class = "form-header", "Description")),
-    column(2, div(class = "form-header", "Sample")),
+    column(2, div(class = "form-header", "Sample Value")),
     column(2, div(class = "form-header", "Convert to")),
     # column(2, div(class = "form-header", "Form")),
     column(2, div(class = "form-header", "Conversion Multiplier")),
@@ -105,9 +105,17 @@ unit_conversion_content <- fluidPage(
   
   # Dynamic form
   uiOutput("nutrient_forms"),
+
+    
       
       ),
 
+  # Add the conversion method selector
+  div(class = "form-box", 
+      style = "margin-bottom: 10px;",
+      uiOutput("conversion_method_selector")
+  ),
+  
   actionButton('save_conversions', 'Save and Continue'),
   
 )

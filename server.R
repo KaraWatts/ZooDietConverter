@@ -25,7 +25,8 @@ server <- function(input, output, session) {
   saved_settings <- reactiveValues(
     nutrient_key = NULL,
     metadata_key = NULL,
-    conversion_key = NULL
+    conversion_key = NULL,
+    conversion_method = "No Conversion (Already As-Fed)"  # Default to no conversion
   )
   
   saved_metadata_values <- reactiveValues(
@@ -338,25 +339,120 @@ server <- function(input, output, session) {
    
    # Unit Conversion ---------------------------------------------------
    
+   # Global conversion method selector
+   output$conversion_method_selector <- renderUI({
+     div(
+       tags$label("Data Format Conversion:", style = "font-weight: bold; margin-bottom: 15px; display: block;"),
+       div(
+         style = "display: flex; align-items: center; gap: 15px;",
+         span("No Conversion (Already As-Fed)", style = "font-weight: 500;"),
+         tags$label(
+           class = "switch",
+           tags$input(
+             type = "checkbox",
+             id = "global_conversion_method",
+             checked = if(saved_settings$conversion_method == "Convert from Dry Matter to As-Fed") "checked" else NULL
+           ),
+           span(class = "slider")
+         ),
+         span("Convert from Dry Matter to As-Fed", style = "font-weight: 500;")
+       )
+     )
+   })
      
+     # Observer for global conversion method changes
+   observeEvent(input$global_conversion_method, {
+     if (is.null(input$global_conversion_method)) {
+       saved_settings$conversion_method <- "No Conversion (Already As-Fed)"
+     } else {
+       saved_settings$conversion_method <- if(input$global_conversion_method) "Convert from Dry Matter to As-Fed" else "No Conversion (Already As-Fed)"
+     }
+     
+     # Update conversion table with preview values when method changes
+     if (!is.null(nutrData$conversion_table_data)) {
+       updateConversionTablePreview()
+     }
+   })
+   
+   # Function to update conversion table with preview values
+   updateConversionTablePreview <- function() {
+     if (saved_settings$conversion_method == "Convert from Dry Matter to As-Fed") {
+       # Show preview of as-fed values
+       preview_data <- nutrData$preconversion_data %>%
+         left_join(saved_settings$conversion_key, by = "Nutrient") %>%
+         mutate(Value = as.numeric(Value) * Multiplier) %>%
+         group_by(`Sample Date`, `External LabID`, `Internal LabID`, `Desc 1`, `Desc 2`, `Desc 3`, `Desc 4`) %>%
+         mutate(
+           dry_matter_value = ifelse(any(str_detect(tolower(Nutrient), "dry matter")), 
+                                   Value[str_detect(tolower(Nutrient), "dry matter")][1], 
+                                   100)
+         ) %>%
+         ungroup() %>%
+         mutate(
+           af_value = as.double(Value * dry_matter_value/100),
+           preview_value = case_when(
+             str_detect(tolower(Nutrient), "dry matter") ~ dry_matter_value,
+             str_detect(tolower(Nutrient), "gross energy") ~ af_value/10,
+             TRUE ~ af_value
+           )
+         ) %>%
+         select(-Multiplier, -dry_matter_value, -af_value) %>%
+         distinct(Nutrient, .keep_all = TRUE) %>%
+         select(Nutrient, `Desc 4`, preview_value) %>%
+         rename(Value = preview_value)
+       
+       # Update the conversion table data with preview values
+       nutrData$conversion_table_data <- preview_data %>%
+         left_join(constants, by = "Nutrient") %>%
+         left_join(saved_settings$conversion_key, by = "Nutrient") %>%
+         mutate(
+           Unit = Unit.x,
+           `Converted Value` = Value * Multiplier
+         ) %>%
+         select(-Unit.y, -Unit.x)
+     } else {
+       # Reset to original values (no conversion)
+       original_data <- nutrData$preconversion_data %>%
+         distinct(Nutrient, .keep_all = TRUE) %>%
+         select(Nutrient, `Desc 4`, Value)
+       
+       nutrData$conversion_table_data <- original_data %>%
+         left_join(constants, by = "Nutrient") %>%
+         left_join(saved_settings$conversion_key, by = "Nutrient") %>%
+         mutate(
+           Unit = Unit.x,
+           `Converted Value` = Value * Multiplier
+         ) %>%
+         select(-Unit.y, -Unit.x)
+     }
+   }
+   
      # Generate form fields dynamically
      output$nutrient_forms <- renderUI({
        req(nutrData$conversion_table_data)
+       # Also react to conversion method changes
+       req(saved_settings$conversion_method)
        
        data <- nutrData$conversion_table_data
        
        lapply(seq_len(nrow(data)), function(i) {
+         # Add label to show what the sample value represents
+         sample_label <- if(saved_settings$conversion_method == "Convert from Dry Matter to As-Fed") {
+           "Sample (As-Fed Preview)"
+         } else {
+           "Sample (Original)"
+         }
+         
          fluidRow(
            column(2, strong(data$Nutrient[i])),
            column(2, data$`Desc 4`[i]),
-           column(2, data$Value[i]),
+           column(2, div(
+             style = "font-size: 12px; color: #666; margin-bottom: 2px;", 
+             sample_label,
+             br(),
+             strong(sprintf("%.2f", data$Value[i]))
+           )),
            column(2, data$Unit[i]),
-           # column(2, selectInput(
-           #   inputId = paste0("form_", i),
-           #   label = NULL,
-           #   choices = c("As Fed", "Dry Matter"),
-           #   selected = "As Fed"
-           # )),
            column(2, numericInput(
              inputId = paste0("mult_", i),
              label = NULL,
@@ -374,6 +470,9 @@ server <- function(input, output, session) {
      # Compute converted values
      observe({
        req(nutrData$conversion_table_data)
+       # Also react to conversion method changes
+       req(saved_settings$conversion_method)
+       
        data <- nutrData$conversion_table_data
        lapply(seq_len(nrow(data)), function(i) {
          output[[paste0("converted_", i)]] <- renderText({
@@ -458,14 +557,43 @@ server <- function(input, output, session) {
        }
      }
      
-
-     nutrData$converted_data <-nutrData$preconversion_data %>%
-       left_join(saved_settings$conversion_key, by = "Nutrient") %>%
-       mutate(
-         Value = as.numeric(Value) * Multiplier,
-         Unit = Unit
-       ) %>%
-       select(-Multiplier) 
+     # Apply conversion based on selected method
+     if (saved_settings$conversion_method == "Convert from Dry Matter to As-Fed") {
+       # Convert from dry matter to as-fed format
+       nutrData$converted_data <- nutrData$preconversion_data %>%
+         left_join(saved_settings$conversion_key, by = "Nutrient") %>%
+         mutate(
+           # Apply unit conversion multipliers first
+           Value = as.numeric(Value) * Multiplier
+         ) %>%
+         # Add dry matter values to each row for conversion
+         group_by(`Sample Date`, `External LabID`, `Internal LabID`, `Desc 1`, `Desc 2`, `Desc 3`, `Desc 4`) %>%
+         mutate(
+           dry_matter_value = ifelse(any(str_detect(tolower(Nutrient), "dry matter")), 
+                                   Value[str_detect(tolower(Nutrient), "dry matter")][1], 
+                                   100)  # Default to 100 if no dry matter found
+         ) %>%
+         ungroup() %>%
+         mutate(
+           af_value = as.double(Value * dry_matter_value/100),
+           final_value = case_when(
+             str_detect(tolower(Nutrient), "dry matter") ~ dry_matter_value,
+             str_detect(tolower(Nutrient), "gross energy") ~ af_value/10,
+             TRUE ~ af_value
+           ),
+           Value = final_value
+         ) %>%
+         select(-Multiplier, -dry_matter_value, -af_value, -final_value) 
+     } else {
+       # No conversion needed - data is already in as-fed format
+       nutrData$converted_data <- nutrData$preconversion_data %>%
+         left_join(saved_settings$conversion_key, by = "Nutrient") %>%
+         mutate(
+           Value = as.numeric(Value) * Multiplier,
+           Unit = Unit
+         ) %>%
+         select(-Multiplier) 
+     }
 
       
      step_complete$unit_conversions <- TRUE
