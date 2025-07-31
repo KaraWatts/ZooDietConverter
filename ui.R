@@ -158,12 +158,12 @@ review_content <- fluidPage(
         column(6, 
                downloadButton('download', 'Download Converted Data', 
                              class = "btn-primary", 
-                             style = "margin-right: 10px;")
+                             style = "margin-right: 10px; color: white;")
         ),
         column(6,
                downloadButton('download_settings', 'Save Settings for Reuse', 
                              class = "btn-success",
-                             style = "background-color: rgb(56,126,63); border-color: rgb(56,126,63);")
+                             style = "background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white;")
         )
       )
   ),
@@ -192,8 +192,11 @@ ui <- dashboardPage(
       menuItem("Unit Conversions", tabName = "unit_conversions", icon = icon("exchange-alt")),
       menuItem("Review and Download", tabName = "review_download", icon = icon("download")),
       menuItem("Help", icon = icon("question-circle"),
-               # menuSubItem("Conversion Example", tabName = "conversion_example"),
                menuSubItem("Zoo Diet Docs", href = "https://zoodiets.com/user-guide/"))
+    ),
+    div(
+      class = "sidebar-version",
+      "Version 1.0.0"
     )
   ),
   
@@ -232,7 +235,7 @@ ui <- dashboardPage(
 
 
 
-  
+
 
 
 
