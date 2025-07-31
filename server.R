@@ -175,7 +175,14 @@ server <- function(input, output, session) {
         )
       }, error = function(e) {
         showNotification(paste("Error rendering data table:", e$message), type = "error")
-        NULL
+        datatable(
+          data.frame(Message = "Error rendering data table. Please check your input."),
+          options = list(
+            dom = 't',  # Only show the table body
+            paging = FALSE,  # Disable pagination
+            searching = FALSE  # Disable search
+          )
+        )
       })
     })
   })
