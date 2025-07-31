@@ -14,28 +14,54 @@ upload_data_content <- fluidPage(
   #Styling
   tags$style(HTML("
   .input-section {
-    display: flex;
-    flex-direction: column; 
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+    border-left: 4px solid rgb(56,126,63);
   }
  
 
   .inputNotice {
-    margin-top: -20px;
-    color: #555;
+    margin-top: 10px;
+    color: #666;
+    font-size: 12px;
   }
 
   .h3 {
     color: rgb(56,126,63);
     font-weight: 600;
   }
+  
+  .settings-section {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+    border-left: 4px solid rgb(56,126,63);
+  }
   ")),
   
   #Content
       h3(class = "h3", "Upload and Review Raw Data"),
+      
+      # Data upload section
       div(class = "input-section",
-          div(class = "fileInput", fileInput("file", "", buttonLabel = "Upload CSV File...", accept = '.csv')),
+          h4("Upload Nutrition Data", style = "color: rgb(56,126,63); margin-bottom: 10px;"),
+          fileInput("file", "", buttonLabel = "Upload CSV File...", accept = '.csv'),
           div(class = "inputNotice", "Important: Dairy One files must be in the '-29.csv' format.")
-          ),
+      ),
+  
+  # Settings upload section
+  div(class = "settings-section",
+      h4("Load Previous Settings (Optional)", style = "color: rgb(56,126,63); margin-bottom: 10px;"),
+      fileInput("settings_file", "Upload Settings File", 
+                buttonLabel = "Load Settings...", 
+                accept = '.rds',
+                placeholder = "No settings file selected"),
+      div(style = "font-size: 12px; color: #666;", 
+          "Upload a previously saved settings file to quickly configure metadata and nutrient mappings.")
+  ),
   
   div(class = 'table', DTOutput('rawTable')),
   actionButton('save_upload', 'Save and Continue')
@@ -89,14 +115,14 @@ unit_conversion_content <- fluidPage(
     }
   ")),
 
-  h3("Provide Conversion Values for All Units"),
-  # div(class = 'table', DTOutput('conversionTable')),
+  h3("Unit Conversions & Data Format"),
+  
   # Table headers
   div(class="form-box",
   fluidRow(
     column(2, div(class = "form-header", "Nutrient")),
     column(2, div(class = "form-header", "Description")),
-    column(2, div(class = "form-header", "Sample")),
+    column(2, div(class = "form-header", "Sample Value")),
     column(2, div(class = "form-header", "Convert to")),
     # column(2, div(class = "form-header", "Form")),
     column(2, div(class = "form-header", "Conversion Multiplier")),
@@ -105,8 +131,16 @@ unit_conversion_content <- fluidPage(
   
   # Dynamic form
   uiOutput("nutrient_forms"),
+
+    
       
       ),
+
+  # Add the conversion method selector
+  div(class = "form-box", 
+      style = "margin-bottom: 10px;",
+      uiOutput("conversion_method_selector")
+  ),
 
   actionButton('save_conversions', 'Save and Continue'),
   
@@ -117,8 +151,26 @@ review_content <- fluidPage(
   
   h3("Review Converted Data"),
   div(class = 'table', DTOutput('convertedTable')),
-  downloadButton('download', 'Download Data'),
-  actionButton('return', 'Upload A New File')
+  
+  # Download buttons section
+  div(style = "margin: 20px 0;",
+      fluidRow(
+        column(6, 
+               downloadButton('download', 'Download Converted Data', 
+                             class = "btn-primary", 
+                             style = "margin-right: 10px;")
+        ),
+        column(6,
+               downloadButton('download_settings', 'Save Settings for Reuse', 
+                             class = "btn-success",
+                             style = "background-color: rgb(56,126,63); border-color: rgb(56,126,63);")
+        )
+      )
+  ),
+  
+  div(style = "margin-top: 20px;",
+      actionButton('return', 'Upload A New File')
+  )
   
 )
 
