@@ -1,6 +1,6 @@
 # ZooDietConverter 
 
-**ZooDietConverter** is a Shiny-based R application designed to help zoo nutritionists convert nutrient data into standardized formats for analysis and comparison via [Zoo Diet Navigator](https://github.com/KaraWatts/ZooDietNavigator). The app allows users to upload food data, convert units, align nutrient names, and review the transformed dataset—all in a simple, interactive workflow.
+[**ZooDietConverter**](https://zoonut.shinyapps.io/ZDNConverter/) is a Shiny-based R application designed to help zoo nutritionists convert nutrient data into standardized formats for analysis and comparison via [Zoo Diet Navigator](https://github.com/KaraWatts/ZooDietNavigator). The app allows users to upload food data, convert units, align nutrient names, and review the transformed dataset—all in a simple, interactive workflow.
 
 ---
 
