@@ -122,27 +122,48 @@ server <- function(input, output, session) {
   observeEvent(input$file, {
     req(input$file)
     print("File uploaded, reading data...")
-    nutrData$raw <- read_csv(input$file$datapath, 
-                             na = "not requested")
-    print("Data read successfully!")
-    step_complete$file_upload <- TRUE
     
-    
-    # Render Raw Data Table
-    output$rawTable <- renderDT({
-      req(nutrData$raw)  
-      datatable(
-        nutrData$raw,
-        options = list(
-          scrollX = TRUE,
-          columnDefs = list(list(
-            targets = 7,
-            render = JS(
-              "function(data, type, row, meta) {",
-              "return type === 'display' && data.length > 20 ?",
-              "'<span title=\"' + data + '\">' + data.substr(0, 20) + '...</span>' : data;",
-              "}")))
-        ))
+    tryCatch({
+      nutrData$raw <- read_csv(input$file$datapath, 
+                               col_types = cols(.default = "c"))  # Read all as character first
+      print("Data read successfully!")
+      step_complete$file_upload <- TRUE
+      
+      # Render Raw Data Table
+      output$rawTable <- renderDT({
+        req(nutrData$raw)
+        
+        datatable(
+          nutrData$raw,
+          options = list(
+            scrollX = TRUE,
+            processing = TRUE,
+            deferRender = TRUE,
+            pageLength = 10,
+            lengthMenu = c(5, 10, 25, 50),
+            columnDefs = list(
+              list(
+                targets = "_all",
+                render = JS(
+                  "function(data, type, row, meta) {",
+                  "if (type === 'display' && data && data.length > 20) {",
+                  "return '<span title=\"' + data + '\">' + data.substr(0, 20) + '...</span>';",
+                  "} else if (data === null || data === '') {",
+                  "return '<span style=\"color: #999;\">-</span>';",
+                  "} else {",
+                  "return data;",
+                  "}",
+                  "}"
+                )
+              )
+            )
+          )
+        )
+      })
+      
+    }, error = function(e) {
+      print(paste("Error reading file:", e$message))
+      showNotification(paste("Error reading file:", e$message), type = "error")
     })
     
   })
@@ -243,7 +264,7 @@ server <- function(input, output, session) {
     nutrData$pivot_data <- nutrData$metadata %>%
       pivot_longer(cols = saved_metadata_values$First_Nutrient_Listed:last_col(), names_to = "Nutrient", values_to = "value") %>%
       mutate(
-        Value = as.numeric(value),
+        Value = parse_number(value),
         `Sample Date` = parse_date(`Sample Date`, "%m/%d/%Y")
       ) %>%
       drop_na(Value) %>%
