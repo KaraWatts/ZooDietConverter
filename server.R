@@ -122,30 +122,72 @@ server <- function(input, output, session) {
   observeEvent(input$file, {
     req(input$file)
     print("File uploaded, reading data...")
-    nutrData$raw <- read_csv(input$file$datapath, 
-                             na = "not requested")
-    print("Data read successfully!")
-    step_complete$file_upload <- TRUE
     
-    
-    # Render Raw Data Table
-    output$rawTable <- renderDT({
-      req(nutrData$raw)  
-      datatable(
-        nutrData$raw,
-        options = list(
-          scrollX = TRUE,
-          columnDefs = list(list(
-            targets = 7,
-            render = JS(
-              "function(data, type, row, meta) {",
-              "return type === 'display' && data.length > 20 ?",
-              "'<span title=\"' + data + '\">' + data.substr(0, 20) + '...</span>' : data;",
-              "}")))
-        ))
+    # Only surround the file reading and parsing with tryCatch
+    tryCatch({
+      # Check file extension
+      file_ext <- tools::file_ext(input$file$name)
+      if (tolower(file_ext) != "csv") {
+        stop("Only CSV files are supported. Please upload a .csv file.")
+      }
+      
+      nutrData$raw <- read_csv(input$file$datapath, 
+                               col_types = cols(.default = "c")) 
+      print("Data read successfully!")
+      step_complete$file_upload <- TRUE
+    }, error = function(e) {
+      print(paste("Error reading file:", e$message))
+      showNotification(paste("Error reading file:", e$message), type = "error")
+      nutrData$raw <- NULL
+      step_complete$file_upload <- FALSE
+      return()
     })
     
+    # Render Raw Data Table 
+    output$rawTable <- renderDT({
+      req(nutrData$raw)
+      tryCatch({
+        datatable(
+          nutrData$raw,
+          options = list(
+            scrollX = TRUE,
+            processing = TRUE,
+            deferRender = TRUE,
+            pageLength = 10,
+            lengthMenu = c(5, 10, 25, 50),
+            columnDefs = list(
+              list(
+                targets = "_all",
+                render = JS(
+                  "function(data, type, row, meta) {",
+                  "if (type === 'display' && data && data.length > 20) {",
+                  "return '<span title=\"' + data + '\">' + data.substr(0, 20) + '...</span>';",
+                  "} else if (data === null || data === '') {",
+                  "return '<span style=\"color: #999;\">-</span>';",
+                  "} else {",
+                  "return data;",
+                  "}",
+                  "}"
+                )
+              )
+            )
+          )
+        )
+      }, error = function(e) {
+        showNotification(paste("Error rendering data table:", e$message), type = "error")
+        datatable(
+          data.frame(Message = "Error rendering data table. Please check your input."),
+          options = list(
+            dom = 't',  # Only show the table body
+            paging = FALSE,  # Disable pagination
+            searching = FALSE  # Disable search
+          )
+        )
+      })
+    })
   })
+    
+
   
   # Save Uploaded Data
   observeEvent(input$save_upload, {
@@ -243,7 +285,7 @@ server <- function(input, output, session) {
     nutrData$pivot_data <- nutrData$metadata %>%
       pivot_longer(cols = saved_metadata_values$First_Nutrient_Listed:last_col(), names_to = "Nutrient", values_to = "value") %>%
       mutate(
-        Value = as.numeric(value),
+        Value = parse_number(value),
         `Sample Date` = parse_date(`Sample Date`, "%m/%d/%Y")
       ) %>%
       drop_na(Value) %>%
@@ -264,9 +306,18 @@ server <- function(input, output, session) {
     
     
     if (!is.null(saved_settings$nutrient_key)) {
-      selected_nutrients <- saved_settings$nutrient_key$Selected_nutrient
+      # keep all current nutrients, use saved mapping if available
+      merged_key <- nutrient_names %>%
+        left_join(saved_settings$nutrient_key, by = "Nutrient")
+      # If Selected_nutrient is missing, default to Nutrient
+      na_mask <- is.na(merged_key$Selected_nutrient)
+      merged_key$Selected_nutrient[na_mask] <- merged_key$Nutrient[na_mask]
+      selected_nutrients <- merged_key$Selected_nutrient
+      # Update saved_settings$nutrient_key to include any new nutrients
+      saved_settings$nutrient_key <- merged_key
     } else {
-        selected_nutrients <- NULL
+      selected_nutrients <- nutrient_names$Nutrient
+      saved_settings$nutrient_key <- nutrient_names %>% mutate(Selected_nutrient = Nutrient)
     }
 
     nutrData$nutrient_names <- nutrient_names
