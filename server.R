@@ -123,16 +123,30 @@ server <- function(input, output, session) {
     req(input$file)
     print("File uploaded, reading data...")
     
+    # Only surround the file reading and parsing with tryCatch
     tryCatch({
+      # Check file extension
+      file_ext <- tools::file_ext(input$file$name)
+      if (tolower(file_ext) != "csv") {
+        stop("Only CSV files are supported. Please upload a .csv file.")
+      }
+      
       nutrData$raw <- read_csv(input$file$datapath, 
-                               col_types = cols(.default = "c"))  # Read all as character first
+                               col_types = cols(.default = "c")) 
       print("Data read successfully!")
       step_complete$file_upload <- TRUE
-      
-      # Render Raw Data Table
-      output$rawTable <- renderDT({
-        req(nutrData$raw)
-        
+    }, error = function(e) {
+      print(paste("Error reading file:", e$message))
+      showNotification(paste("Error reading file:", e$message), type = "error")
+      nutrData$raw <- NULL
+      step_complete$file_upload <- FALSE
+      return()
+    })
+    
+    # Render Raw Data Table 
+    output$rawTable <- renderDT({
+      req(nutrData$raw)
+      tryCatch({
         datatable(
           nutrData$raw,
           options = list(
@@ -159,14 +173,14 @@ server <- function(input, output, session) {
             )
           )
         )
+      }, error = function(e) {
+        showNotification(paste("Error rendering data table:", e$message), type = "error")
+        NULL
       })
-      
-    }, error = function(e) {
-      print(paste("Error reading file:", e$message))
-      showNotification(paste("Error reading file:", e$message), type = "error")
     })
-    
   })
+    
+
   
   # Save Uploaded Data
   observeEvent(input$save_upload, {
