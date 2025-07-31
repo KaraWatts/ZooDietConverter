@@ -303,7 +303,8 @@ server <- function(input, output, session) {
       merged_key <- nutrient_names %>%
         left_join(saved_settings$nutrient_key, by = "Nutrient")
       # If Selected_nutrient is missing, default to Nutrient
-      merged_key$Selected_nutrient[is.na(merged_key$Selected_nutrient)] <- merged_key$Nutrient[is.na(merged_key$Selected_nutrient)]
+      na_mask <- is.na(merged_key$Selected_nutrient)
+      merged_key$Selected_nutrient[na_mask] <- merged_key$Nutrient[na_mask]
       selected_nutrients <- merged_key$Selected_nutrient
       # Update saved_settings$nutrient_key to include any new nutrients
       saved_settings$nutrient_key <- merged_key
