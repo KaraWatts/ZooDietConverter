@@ -65,6 +65,14 @@ upload_data_content <- fluidPage(
                 buttonLabel = "Load Settings...", 
                 accept = '.rds',
                 placeholder = "No settings file selected"),
+      div(style = "margin: 10px 0;",
+          checkboxInput("auto_apply_settings", 
+                       "Auto-apply settings and skip to download", 
+                       value = FALSE,
+                       width = "100%"),
+          div(style = "font-size: 12px; color: #666; margin-top: 5px;", 
+              "When checked, the app will automatically process your data using the uploaded settings and skip directly to the download page.")
+      ),
       div(style = "font-size: 12px; color: #666;", 
           "Upload a previously saved settings file to quickly configure metadata and nutrient mappings.")
   ),
@@ -81,7 +89,7 @@ metadata_content <- fluidPage(
   # Instructions section
   div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
       h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
-      p("Metadata mapping is crucial for organizing your nutrition data correctly within the ZooDiets system. Here you'll identify which columns in your uploaded file contain essential information like food names, diet identifiers, animal names, and dates. This mapping ensures that your converted data maintains proper structure and can be easily imported into ZooDiets with all the necessary context intact."),
+      p("Metadata mapping is crucial for organizing your nutrition data correctly within the Zoo Diet NaviGator system. Here you'll identify which columns in your uploaded file contain essential information like food names, diet identifiers, animal names, and dates. This mapping ensures that your converted data maintains proper structure and can be easily imported into Zoo Diet NaviGator with all the necessary context intact."),
       p(style = "margin-top: 10px; font-weight: bold; color: #1C4420;", "Fields marked with * are required.")
   ),
   
@@ -98,12 +106,12 @@ metadata_content <- fluidPage(
 #NUTRIENT NAMES TAB
 nutrient_names_content <- fluidPage(
 
-  h3("Align Nutrient Names with ZooDiets Standards"),
+  h3("Align Nutrient Names with Zoo Diet NaviGator Standards"),
   
   # Instructions section
   div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
       h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
-      p("Standardizing nutrient names is essential for compatibility with the ZooDiets database. Different laboratories and data sources often use varying terminology for the same nutrients (e.g., 'Crude Protein' vs 'CP' vs 'Protein'). This alignment process ensures that your data will integrate seamlessly with ZooDiets' standardized nutrient database, allowing for accurate nutritional calculations and comparisons across different food items and diets.")
+      p("Standardizing nutrient names is essential for compatibility with the Zoo Diet NaviGator database. Different laboratories and data sources often use varying terminology for the same nutrients (e.g., 'Crude Protein' vs 'CP' vs 'Protein'). This alignment process ensures that your data will integrate seamlessly with Zoo Diet NaviGator' standardized nutrient database, allowing for accurate nutritional calculations and comparisons across different food items and diets.")
   ),
   
   div(class = 'table', DTOutput('nutrientTable')),
@@ -141,7 +149,7 @@ unit_conversion_content <- fluidPage(
   # Instructions section
   div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
       h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
-      p("Unit conversion ensures your nutritional data is expressed in the correct format for ZooDiets. Laboratory reports may present nutrients in various units (percentages, grams per kilogram, milligrams per gram, etc.), but ZooDiets requires specific standardized units for accurate diet formulation and analysis. The converter automatically applies the conversion factors you specify to ensure unit standardization for ZooDiets.")
+      p("Unit conversion ensures your nutritional data is expressed in the correct format for Zoo Diet NaviGator. Laboratory reports may present nutrients in various units (percentages, grams per kilogram, milligrams per gram, etc.), but Zoo Diet NaviGator requires specific standardized units for accurate diet formulation and analysis. The converter automatically applies the conversion factors you specify to ensure unit standardization for Zoo Diet NaviGator.")
   ),
   
   # Table headers
@@ -181,7 +189,7 @@ review_content <- fluidPage(
   # Instructions section
   div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
       h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
-      p("This final step presents your fully converted data, ready for import into ZooDiets. The conversion process has standardized your nutrient names, applied appropriate unit conversions, and organized your metadata according to ZooDiets requirements. You can download the converted file for immediate use, and optionally save your conversion settings as a template for processing similar datasets in the future, streamlining your workflow for routine data conversions.")
+      p("This final step presents your fully converted data, ready for import into Zoo Diet NaviGator. The conversion process has standardized your nutrient names, applied appropriate unit conversions, and organized your metadata according to Zoo Diet NaviGator requirements. You can download the converted file for immediate use, and optionally save your conversion settings as a template for processing similar datasets in the future, streamlining your workflow for routine data conversions.")
   ),
   
   div(class = 'table', DTOutput('convertedTable')),
