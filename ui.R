@@ -360,7 +360,13 @@ ui <- dashboardPage(
 
   
   dashboardHeader(
-    title = "Zoo Diet Navigator Data Converter"),
+    title = tags$div(
+      style = "display: flex; align-items: center; height: 100%;",
+      tags$img(src = "ZDN_logo 250 (SVG based - white solid no text).png", 
+               height = "40px", 
+               style = "margin-right: 10px;"),
+      "Zoo Diet NaviGator Data Converter"
+    )),
   
   dashboardSidebar(
 
@@ -377,7 +383,7 @@ ui <- dashboardPage(
     ),
     div(
       class = "sidebar-version",
-      "Version 1.0.0"
+      "Version 1.1.0"
     )
   ),
   
