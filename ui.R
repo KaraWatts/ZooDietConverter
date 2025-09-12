@@ -40,6 +40,56 @@ upload_data_content <- fluidPage(
     margin: 20px 0;
     border-left: 4px solid rgb(56,126,63);
   }
+  
+  .btn-success:hover {
+    background-color: rgb(46,106,53) !important;
+    border-color: rgba(255, 192, 47, 1) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 192, 47, 0.4);
+  }
+  
+  .btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    border-color: rgba(255, 192, 47, 1) !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 192, 47, 0.3);
+  }
+  
+  .btn-warning:hover {
+    background-color: #ac8205ff !important;
+    border-color: rgba(255, 192, 47, 1) !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 192, 47, 0.4);
+  }
+  
+  .btn-outline-primary:hover {
+    background-color: #0d6efd !important;
+    border-color: rgba(255, 192, 47, 1) !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 192, 47, 0.3);
+  }
+  
+  .btn-primary:hover {
+    background-color: #0b5ed7 !important;
+    border-color: rgba(255, 192, 47, 1) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 192, 47, 0.4);
+  }
+    
+  /* Download button hover effects */
+  .shiny-download-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+  }
+  
+  /* Smooth transitions for all buttons */
+  .btn, .shiny-download-link {
+    transition: all 0.3s ease;
+  }
   ")),
   
   #Content
@@ -78,7 +128,15 @@ upload_data_content <- fluidPage(
   ),
   
   div(class = 'table', DTOutput('rawTable')),
-  actionButton('save_upload', 'Save and Continue')
+  
+  # Navigation button with prominent styling
+  div(style = "margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 10px; border: 2px solid #dee2e6; box-shadow: 0 4px 8px rgba(0,0,0,0.1);",
+      div(style = "text-align: center;",
+          actionButton('save_upload', 'Save and Continue',
+                      icon = icon("arrow-right"),
+                      class = "btn-success",
+                      style = "padding: 11px 36px; font-weight: bold; font-size: 14px; border-width: 2px; background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white;"))
+  )
 )
 
 #META DATA TAB
@@ -94,22 +152,35 @@ metadata_content <- fluidPage(
   ),
   
   fluidRow(
-    
-    column(2, div(class= 'metadata-dropdown', uiOutput("metadata_dropdowns"))),
-    column(10, div(class = 'table', DTOutput("metadataTable")))
-    ),
-  
-  fluidRow(
-    column(6,
-           actionButton('back_to_upload', 'Back', icon = icon("arrow-left"),
-                       style = "margin-right: 10px;")
-    ),
-    column(6,
-           div(style = "text-align: right;",
+    column(2, 
+           div(class= 'metadata-dropdown', uiOutput("metadata_dropdowns")),
+           # Check Selection button positioned under dropdown menu
+           div(style = "margin: 20px 0; text-align: center;",
                actionButton('check_metadata', 'Check Selection', 
-                           style = "margin-right: 10px;"),
-               actionButton('save_metadata', 'Save and Continue'))
-    )
+                           class = "btn-warning",
+                           style = "padding: 11px 12px; font-weight: bold; font-size: 14px; border-width: 2px; color: black; background-color: #ffc107; border-color: #ffc107; width: 150px; text-align: center;")
+           )
+    ),
+    column(10, div(class = 'table', DTOutput("metadataTable")))
+  ),
+  
+  # Navigation buttons with prominent styling
+  div(style = "margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 10px; border: 2px solid #dee2e6; box-shadow: 0 4px 8px rgba(0,0,0,0.1);",
+      fluidRow(
+        column(6,
+               actionButton('back_to_upload', 'Back to Upload', 
+                           icon = icon("arrow-left"),
+                           class = "btn-outline-secondary",
+                           style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px;")
+        ),
+        column(6,
+               div(style = "text-align: right;",
+                   actionButton('save_metadata', 'Save and Continue',
+                               icon = icon("arrow-right"),
+                               class = "btn-success",
+                               style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px; background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white;"))
+        )
+      )
   )
 )
 
@@ -126,15 +197,23 @@ nutrient_names_content <- fluidPage(
   
   div(class = 'table', DTOutput('nutrientTable')),
   
-  fluidRow(
-    column(6,
-           actionButton('back_to_metadata', 'Back', icon = icon("arrow-left"),
-                       style = "margin-right: 10px;")
-    ),
-    column(6,
-           div(style = "text-align: right;",
-               actionButton('save_nutrients', 'Save and Continue'))
-    )
+  # Navigation buttons with prominent styling
+  div(style = "margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 10px; border: 2px solid #dee2e6; box-shadow: 0 4px 8px rgba(0,0,0,0.1);",
+      fluidRow(
+        column(6,
+               actionButton('back_to_metadata', 'Back to Metadata', 
+                           icon = icon("arrow-left"),
+                           class = "btn-outline-secondary",
+                           style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px;")
+        ),
+        column(6,
+               div(style = "text-align: right;",
+                   actionButton('save_nutrients', 'Save and Continue',
+                               icon = icon("arrow-right"),
+                               class = "btn-success",
+                               style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px; background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white;"))
+        )
+      )
   )
   
   )
@@ -197,15 +276,23 @@ unit_conversion_content <- fluidPage(
       uiOutput("conversion_method_selector")
   ),
 
-  fluidRow(
-    column(6,
-           actionButton('back_to_nutrients', 'Back', icon = icon("arrow-left"),
-                       style = "margin-right: 10px;")
-    ),
-    column(6,
-           div(style = "text-align: right;",
-               actionButton('save_conversions', 'Save and Continue'))
-    )
+  # Navigation buttons with prominent styling
+  div(style = "margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 10px; border: 2px solid #dee2e6; box-shadow: 0 4px 8px rgba(0,0,0,0.1);",
+      fluidRow(
+        column(6,
+               actionButton('back_to_nutrients', 'Back to Nutrients', 
+                           icon = icon("arrow-left"),
+                           class = "btn-outline-secondary",
+                           style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px;")
+        ),
+        column(6,
+               div(style = "text-align: right;",
+                   actionButton('save_conversions', 'Save and Continue',
+                               icon = icon("arrow-right"),
+                               class = "btn-success",
+                               style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px; background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white;"))
+        )
+      )
   )
   
 )
@@ -223,32 +310,46 @@ review_content <- fluidPage(
   
   div(class = 'table', DTOutput('convertedTable')),
   
-  # Download buttons section
-  div(style = "margin: 20px 0;",
-      fluidRow(
-        column(6, 
-               downloadButton('download', 'Download Converted Data', 
-                             class = "btn-primary", 
-                             style = "margin-right: 10px; color: white;")
-        ),
-        column(6,
-               downloadButton('download_settings', 'Save Settings for Reuse', 
-                             class = "btn-success",
-                             style = "background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white;")
-        )
-      )
-  ),
-  
-  div(style = "margin-top: 20px;",
-      fluidRow(
-        column(6,
-               actionButton('back_to_conversion', 'Back', icon = icon("arrow-left"),
-                           style = "margin-right: 10px;")
-        ),
-        column(6,
-               div(style = "text-align: right;",
-                   actionButton('return', 'Upload A New File'))
-        )
+  # Button section with cleaner layout
+  div(style = "margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;",
+      h4("Actions", style = "margin-bottom: 20px; color: #495057;"),
+      
+      # Primary action buttons (downloads)
+      div(style = "margin-bottom: 20px;",
+          h5("Download Options", style = "margin-bottom: 15px; color: #6c757d; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;"),
+          fluidRow(
+            column(6, 
+                   downloadButton('download', 'Download Converted Data', 
+                                 class = "btn-primary btn-lg", 
+                                 style = "width: 100%; color: white; font-weight: bold;",
+                                 icon = icon("download"))
+            ),
+            column(6,
+                   downloadButton('download_settings', 'Save Settings for Reuse', 
+                                 class = "btn-success btn-lg",
+                                 style = "width: 100%; background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white; font-weight: bold;",
+                                 icon = icon("save"))
+            )
+          )
+      ),
+      
+      # Navigation buttons
+      div(style = "border-top: 1px solid #e9ecef; padding-top: 20px;",
+          h5("Navigation", style = "margin-bottom: 15px; color: #6c757d; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;"),
+          fluidRow(
+            column(6,
+                   actionButton('back_to_conversion', 'Back to Unit Conversion', 
+                               icon = icon("arrow-left"),
+                               class = "btn-outline-secondary",
+                               style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px;")
+            ),
+            column(6,
+                   actionButton('return', 'Upload New File', 
+                               icon = icon("upload"),
+                               class = "btn-outline-primary",
+                               style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px;")
+            )
+          )
       )
   )
   
