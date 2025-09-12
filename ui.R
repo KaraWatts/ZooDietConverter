@@ -40,6 +40,56 @@ upload_data_content <- fluidPage(
     margin: 20px 0;
     border-left: 4px solid rgb(56,126,63);
   }
+  
+  .btn-success:hover {
+    background-color: rgb(46,106,53) !important;
+    border-color: rgba(255, 192, 47, 1) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 192, 47, 0.4);
+  }
+  
+  .btn-outline-secondary:hover {
+    background-color: #6c757d !important;
+    border-color: rgba(255, 192, 47, 1) !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 192, 47, 0.3);
+  }
+  
+  .btn-warning:hover {
+    background-color: #ac8205ff !important;
+    border-color: rgba(255, 192, 47, 1) !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 192, 47, 0.4);
+  }
+  
+  .btn-outline-primary:hover {
+    background-color: #0d6efd !important;
+    border-color: rgba(255, 192, 47, 1) !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 192, 47, 0.3);
+  }
+  
+  .btn-primary:hover {
+    background-color: #0b5ed7 !important;
+    border-color: rgba(255, 192, 47, 1) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 192, 47, 0.4);
+  }
+    
+  /* Download button hover effects */
+  .shiny-download-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+  }
+  
+  /* Smooth transitions for all buttons */
+  .btn, .shiny-download-link {
+    transition: all 0.3s ease;
+  }
   ")),
   
   #Content
@@ -65,12 +115,28 @@ upload_data_content <- fluidPage(
                 buttonLabel = "Load Settings...", 
                 accept = '.rds',
                 placeholder = "No settings file selected"),
+      div(style = "margin: 10px 0;",
+          checkboxInput("auto_apply_settings", 
+                       "Auto-apply settings and skip to download", 
+                       value = FALSE,
+                       width = "100%"),
+          div(style = "font-size: 12px; color: #666; margin-top: 5px;", 
+              "When checked, the app will automatically process your data using the uploaded settings and skip directly to the download page.")
+      ),
       div(style = "font-size: 12px; color: #666;", 
           "Upload a previously saved settings file to quickly configure metadata and nutrient mappings.")
   ),
   
   div(class = 'table', DTOutput('rawTable')),
-  actionButton('save_upload', 'Save and Continue')
+  
+  # Navigation button with prominent styling
+  div(style = "margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 10px; border: 2px solid #dee2e6; box-shadow: 0 4px 8px rgba(0,0,0,0.1);",
+      div(style = "text-align: center;",
+          actionButton('save_upload', 'Save and Continue',
+                      icon = icon("arrow-right"),
+                      class = "btn-success",
+                      style = "padding: 11px 36px; font-weight: bold; font-size: 14px; border-width: 2px; background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white;"))
+  )
 )
 
 #META DATA TAB
@@ -81,32 +147,74 @@ metadata_content <- fluidPage(
   # Instructions section
   div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
       h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
-      p("Metadata mapping is crucial for organizing your nutrition data correctly within the ZooDiets system. Here you'll identify which columns in your uploaded file contain essential information like food names, diet identifiers, animal names, and dates. This mapping ensures that your converted data maintains proper structure and can be easily imported into ZooDiets with all the necessary context intact.")
+      p("Metadata mapping is crucial for organizing your nutrition data correctly within the Zoo Diet NaviGator system. Here you'll identify which columns in your uploaded file contain essential information like food names, diet identifiers, animal names, and dates. This mapping ensures that your converted data maintains proper structure and can be easily imported into Zoo Diet NaviGator with all the necessary context intact."),
+      p(style = "margin-top: 10px; font-weight: bold; color: #1C4420;", "Fields marked with * are required.")
   ),
   
   fluidRow(
-    
-    column(2, div(class= 'metadata-dropdown', uiOutput("metadata_dropdowns"))),
-    column(10, div(class = 'table', DTOutput("metadataTable")))
+    column(2, 
+           div(class= 'metadata-dropdown', uiOutput("metadata_dropdowns")),
+           # Check Selection button positioned under dropdown menu
+           div(style = "margin: 20px 0; text-align: center;",
+               actionButton('check_metadata', 'Check Selection', 
+                           class = "btn-warning",
+                           style = "padding: 11px 12px; font-weight: bold; font-size: 14px; border-width: 2px; color: black; background-color: #ffc107; border-color: #ffc107; width: 150px; text-align: center;")
+           )
     ),
+    column(10, div(class = 'table', DTOutput("metadataTable")))
+  ),
   
-  actionButton('check_metadata', 'Check Selection'),
-  actionButton('save_metadata', 'Save and Continue')
+  # Navigation buttons with prominent styling
+  div(style = "margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 10px; border: 2px solid #dee2e6; box-shadow: 0 4px 8px rgba(0,0,0,0.1);",
+      fluidRow(
+        column(6,
+               actionButton('back_to_upload', 'Back to Upload', 
+                           icon = icon("arrow-left"),
+                           class = "btn-outline-secondary",
+                           style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px;")
+        ),
+        column(6,
+               div(style = "text-align: right;",
+                   actionButton('save_metadata', 'Save and Continue',
+                               icon = icon("arrow-right"),
+                               class = "btn-success",
+                               style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px; background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white;"))
+        )
+      )
+  )
 )
 
 #NUTRIENT NAMES TAB
 nutrient_names_content <- fluidPage(
 
-  h3("Align Nutrient Names with ZooDiets Standards"),
+  h3("Align Nutrient Names with Zoo Diet NaviGator Standards"),
   
   # Instructions section
   div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
       h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
-      p("Standardizing nutrient names is essential for compatibility with the ZooDiets database. Different laboratories and data sources often use varying terminology for the same nutrients (e.g., 'Crude Protein' vs 'CP' vs 'Protein'). This alignment process ensures that your data will integrate seamlessly with ZooDiets' standardized nutrient database, allowing for accurate nutritional calculations and comparisons across different food items and diets.")
+      p("Standardizing nutrient names is essential for compatibility with the Zoo Diet NaviGator database. Different laboratories and data sources often use varying terminology for the same nutrients (e.g., 'Crude Protein' vs 'CP' vs 'Protein'). This alignment process ensures that your data will integrate seamlessly with Zoo Diet NaviGator' standardized nutrient database, allowing for accurate nutritional calculations and comparisons across different food items and diets.")
   ),
   
   div(class = 'table', DTOutput('nutrientTable')),
-  actionButton('save_nutrients', 'Save and Continue'),
+  
+  # Navigation buttons with prominent styling
+  div(style = "margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 10px; border: 2px solid #dee2e6; box-shadow: 0 4px 8px rgba(0,0,0,0.1);",
+      fluidRow(
+        column(6,
+               actionButton('back_to_metadata', 'Back to Metadata', 
+                           icon = icon("arrow-left"),
+                           class = "btn-outline-secondary",
+                           style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px;")
+        ),
+        column(6,
+               div(style = "text-align: right;",
+                   actionButton('save_nutrients', 'Save and Continue',
+                               icon = icon("arrow-right"),
+                               class = "btn-success",
+                               style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px; background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white;"))
+        )
+      )
+  )
   
   )
 
@@ -140,7 +248,7 @@ unit_conversion_content <- fluidPage(
   # Instructions section
   div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
       h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
-      p("Unit conversion ensures your nutritional data is expressed in the correct format for ZooDiets. Laboratory reports may present nutrients in various units (percentages, grams per kilogram, milligrams per gram, etc.), but ZooDiets requires specific standardized units for accurate diet formulation and analysis. The converter automatically applies the conversion factors you specify to ensure unit standardization for ZooDiets.")
+      p("Unit conversion ensures your nutritional data is expressed in the correct format for Zoo Diet NaviGator. Laboratory reports may present nutrients in various units (percentages, grams per kilogram, milligrams per gram, etc.), but Zoo Diet NaviGator requires specific standardized units for accurate diet formulation and analysis. The converter automatically applies the conversion factors you specify to ensure unit standardization for Zoo Diet NaviGator.")
   ),
   
   # Table headers
@@ -168,7 +276,24 @@ unit_conversion_content <- fluidPage(
       uiOutput("conversion_method_selector")
   ),
 
-  actionButton('save_conversions', 'Save and Continue'),
+  # Navigation buttons with prominent styling
+  div(style = "margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 10px; border: 2px solid #dee2e6; box-shadow: 0 4px 8px rgba(0,0,0,0.1);",
+      fluidRow(
+        column(6,
+               actionButton('back_to_nutrients', 'Back to Nutrients', 
+                           icon = icon("arrow-left"),
+                           class = "btn-outline-secondary",
+                           style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px;")
+        ),
+        column(6,
+               div(style = "text-align: right;",
+                   actionButton('save_conversions', 'Save and Continue',
+                               icon = icon("arrow-right"),
+                               class = "btn-success",
+                               style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px; background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white;"))
+        )
+      )
+  )
   
 )
 
@@ -180,29 +305,52 @@ review_content <- fluidPage(
   # Instructions section
   div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
       h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
-      p("This final step presents your fully converted data, ready for import into ZooDiets. The conversion process has standardized your nutrient names, applied appropriate unit conversions, and organized your metadata according to ZooDiets requirements. You can download the converted file for immediate use, and optionally save your conversion settings as a template for processing similar datasets in the future, streamlining your workflow for routine data conversions.")
+      p("This final step presents your fully converted data, ready for import into Zoo Diet NaviGator. The conversion process has standardized your nutrient names, applied appropriate unit conversions, and organized your metadata according to Zoo Diet NaviGator requirements. You can download the converted file for immediate use, and optionally save your conversion settings as a template for processing similar datasets in the future, streamlining your workflow for routine data conversions.")
   ),
   
   div(class = 'table', DTOutput('convertedTable')),
   
-  # Download buttons section
-  div(style = "margin: 20px 0;",
-      fluidRow(
-        column(6, 
-               downloadButton('download', 'Download Converted Data', 
-                             class = "btn-primary", 
-                             style = "margin-right: 10px; color: white;")
-        ),
-        column(6,
-               downloadButton('download_settings', 'Save Settings for Reuse', 
-                             class = "btn-success",
-                             style = "background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white;")
-        )
+  # Button section with cleaner layout
+  div(style = "margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;",
+      h4("Actions", style = "margin-bottom: 20px; color: #495057;"),
+      
+      # Primary action buttons (downloads)
+      div(style = "margin-bottom: 20px;",
+          h5("Download Options", style = "margin-bottom: 15px; color: #6c757d; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;"),
+          fluidRow(
+            column(6, 
+                   downloadButton('download', 'Download Converted Data', 
+                                 class = "btn-primary btn-lg", 
+                                 style = "width: 100%; color: white; font-weight: bold;",
+                                 icon = icon("download"))
+            ),
+            column(6,
+                   downloadButton('download_settings', 'Save Settings for Reuse', 
+                                 class = "btn-success btn-lg",
+                                 style = "width: 100%; background-color: rgb(56,126,63); border-color: rgb(56,126,63); color: white; font-weight: bold;",
+                                 icon = icon("save"))
+            )
+          )
+      ),
+      
+      # Navigation buttons
+      div(style = "border-top: 1px solid #e9ecef; padding-top: 20px;",
+          h5("Navigation", style = "margin-bottom: 15px; color: #6c757d; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;"),
+          fluidRow(
+            column(6,
+                   actionButton('back_to_conversion', 'Back to Unit Conversion', 
+                               icon = icon("arrow-left"),
+                               class = "btn-outline-secondary",
+                               style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px;")
+            ),
+            column(6,
+                   actionButton('return', 'Upload New File', 
+                               icon = icon("upload"),
+                               class = "btn-outline-primary",
+                               style = "width: 100%; padding: 11px 18px; font-weight: bold; font-size: 14px; border-width: 2px;")
+            )
+          )
       )
-  ),
-  
-  div(style = "margin-top: 20px;",
-      actionButton('return', 'Upload A New File')
   )
   
 )

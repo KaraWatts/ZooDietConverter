@@ -48,6 +48,175 @@ server <- function(input, output, session) {
     nutrient_names = FALSE,
     unit_conversions = FALSE    )
   
+  # Helper function to automatically process all steps when settings are uploaded
+  auto_process_with_settings <- function() {
+    tryCatch({
+      # Validate that we have both data and settings
+      if (is.null(nutrData$raw)) {
+        showNotification("Please upload a data file first.", type = "error")
+        return(FALSE)
+      }
+      
+      if (is.null(saved_metadata_values$Sample_Date) || is.null(saved_metadata_values$First_Nutrient_Listed)) {
+        showNotification("Settings file is missing required metadata mappings.", type = "error")
+        return(FALSE)
+      }
+      
+      # Check if the saved column names exist in the current data
+      required_cols <- c(saved_metadata_values$Sample_Date, saved_metadata_values$First_Nutrient_Listed)
+      required_cols <- required_cols[!is.null(required_cols) & required_cols != ""]
+      
+      missing_cols <- setdiff(required_cols, colnames(nutrData$raw))
+      if (length(missing_cols) > 0) {
+        showNotification(paste("The following columns from your settings are not found in the uploaded data:", 
+                              paste(missing_cols, collapse = ", ")), type = "error")
+        return(FALSE)
+      }
+      
+      # Step 1: Process metadata (equivalent to check_metadata + save_metadata)
+      showNotification("Auto-processing: Applying metadata mappings...", type = "message", duration = 2)
+      
+      # Get all dropdown values from saved settings
+      all_dropdown_values <- c(
+        saved_metadata_values$Sample_Date,
+        saved_metadata_values$External_LabID,
+        saved_metadata_values$Internal_LabID,
+        saved_metadata_values$Desc_1,
+        saved_metadata_values$Desc_2,
+        saved_metadata_values$Desc_3,
+        saved_metadata_values$Desc_4
+      )
+      
+      # Filter out empty selections and get corresponding headers
+      selected_columns <- all_dropdown_values[all_dropdown_values != "" & !is.null(all_dropdown_values)]
+      selected_headers <- metaDataHeaders[all_dropdown_values != "" & !is.null(all_dropdown_values)]
+      
+      # Save Selected Columns (only non-empty ones)
+      nutrData$selected_columns <- c(selected_columns, saved_metadata_values$First_Nutrient_Listed)
+      
+      selected_metadata <- nutrData$raw[, selected_columns, drop = FALSE]
+      colnames(selected_metadata) <- selected_headers
+      
+      # Pull out Nutrient Only Data
+      nutrient_start <- which(colnames(nutrData$raw) == saved_metadata_values$First_Nutrient_Listed)
+      nutrient_data_raw <- nutrData$raw[, nutrient_start:ncol(nutrData$raw)]
+      
+      # Save reordered data
+      nutrData$metadata <- cbind(selected_metadata, nutrient_data_raw)
+      
+      # Create pivot data
+      nutrData$pivot_data <- nutrData$metadata %>%
+        pivot_longer(cols = saved_metadata_values$First_Nutrient_Listed:last_col(), names_to = "Nutrient", values_to = "value") %>%
+        mutate(
+          Value = parse_number(value),
+          `Sample Date` = parse_date(`Sample Date`, "%m/%d/%Y")
+        ) %>%
+        drop_na(Value) %>%
+        select(-value)
+      
+      step_complete$upload_data <- TRUE
+      step_complete$check_metadata <- TRUE
+      step_complete$meta_data <- TRUE
+      
+      # Step 2: Process nutrient names (equivalent to save_nutrients)
+      showNotification("Auto-processing: Applying nutrient name mappings...", type = "message", duration = 2)
+      
+      if (is.null(saved_settings$nutrient_key)) {
+        showNotification("Settings file is missing nutrient mappings.", type = "error")
+        return(FALSE)
+      }
+      
+      # Apply selected values to raw data
+      nutrData$preconversion_data <- as.data.frame(nutrData$pivot_data) %>%
+        left_join(saved_settings$nutrient_key, by = "Nutrient") %>%
+        mutate(Nutrient = ifelse(is.na(Selected_nutrient), "No match", Selected_nutrient)) %>%
+        select(-Selected_nutrient) %>%
+        filter(Nutrient != "IGNORE")
+      
+      # Setup conversion table data
+      nutrData$conversion_table_data <- nutrData$preconversion_data %>%
+        distinct(Nutrient, .keep_all = TRUE) %>%
+        {
+          desc_cols <- intersect(c("Desc 1", "Desc 2", "Desc 3", "Desc 4"), colnames(.))
+          if(length(desc_cols) > 0) {
+            select(., Nutrient, all_of(desc_cols[1]), Value) %>%
+              rename(Sample_Desc = all_of(desc_cols[1]))
+          } else {
+            select(., Nutrient, Value) %>%
+              mutate(Sample_Desc = "")
+          }
+        } %>%
+        left_join(constants, by = "Nutrient") %>%
+        left_join(saved_settings$conversion_key, by = "Nutrient") %>%
+        mutate(
+          Unit = ifelse(is.na(Unit.y), Unit.x, Unit.y),
+          Multiplier = ifelse(is.na(Multiplier), 1, Multiplier),
+          `Converted Value` = Value * Multiplier
+        ) %>%
+        select(-Unit.y, -Unit.x)
+      
+      step_complete$nutrient_names <- TRUE
+      
+      # Step 3: Process conversions (equivalent to save_conversions)
+      showNotification("Auto-processing: Applying unit conversions...", type = "message", duration = 2)
+      
+      # Apply conversion based on selected method
+      if (saved_settings$conversion_method == "Convert from Dry Matter to As-Fed") {
+        # Get the metadata column names (excluding Nutrient and Value columns)
+        metadata_cols <- setdiff(colnames(nutrData$preconversion_data), c("Nutrient", "Value"))
+        
+        if (length(metadata_cols) == 0) {
+          showNotification("Error: No metadata columns found. Please check your data structure.", 
+                          type = "error", duration = 5)
+          return(FALSE)
+        }
+        
+        nutrData$converted_data <- nutrData$preconversion_data %>%
+          left_join(saved_settings$conversion_key, by = "Nutrient") %>%
+          mutate(Value = as.numeric(Value) * Multiplier) %>%
+          group_by(across(all_of(metadata_cols))) %>%
+          mutate(
+            dry_matter_value = ifelse(any(str_detect(tolower(Nutrient), "dry matter")), 
+                                    Value[str_detect(tolower(Nutrient), "dry matter")][1], 
+                                    100)
+          ) %>%
+          ungroup() %>%
+          mutate(
+            af_value = as.double(Value * dry_matter_value/100),
+            final_value = case_when(
+              str_detect(tolower(Nutrient), "dry matter") ~ dry_matter_value,
+              str_detect(tolower(Nutrient), "gross energy") ~ af_value/10,
+              TRUE ~ af_value
+            ),
+            Value = final_value
+          ) %>%
+          select(-Multiplier, -dry_matter_value, -af_value, -final_value) 
+      } else {
+        nutrData$converted_data <- nutrData$preconversion_data %>%
+          left_join(saved_settings$conversion_key, by = "Nutrient") %>%
+          mutate(
+            Value = as.numeric(Value) * Multiplier,
+            Unit = Unit
+          ) %>%
+          select(-Multiplier) 
+      }
+      
+      step_complete$unit_conversions <- TRUE
+      
+      showNotification("Auto-processing complete! Your data is ready for download.", 
+                      type = "message", duration = 5)
+      
+      # Navigate to review and download tab
+      updateTabItems(session, "sidebar", selected = "review_download")
+      
+      return(TRUE)
+      
+    }, error = function(e) {
+      showNotification(paste("Auto-processing failed:", e$message), type = "error", duration = 10)
+      return(FALSE)
+    })
+  }
+  
   # Control Tab Navigation Access
   observe({
 
@@ -78,7 +247,6 @@ server <- function(input, output, session) {
     
   })
 
-  
   # Upload data ---------------------------------------------------------
   
   # Settings file upload handler
@@ -114,6 +282,7 @@ server <- function(input, output, session) {
       
       showNotification("Settings loaded successfully! The app will use your saved configuration for metadata mapping, nutrient names, and conversion settings.", 
                       type = "message", duration = 5)
+      
     }, error = function(e) {
       showNotification(paste("Error loading settings file:", e$message), type = "error")
     })
@@ -193,6 +362,26 @@ server <- function(input, output, session) {
   observeEvent(input$save_upload, {
     req(nutrData$raw)
     step_complete$upload_data <- TRUE
+    
+    # Check if auto-apply is enabled and we have settings loaded
+    if (isTRUE(input$auto_apply_settings) && 
+        !is.null(saved_metadata_values$Sample_Date) && 
+        !is.null(saved_settings$nutrient_key) && 
+        !is.null(saved_settings$conversion_key)) {
+      
+      # Auto-process with settings
+      if (auto_process_with_settings()) {
+        # If auto-processing succeeded, we're done - it will navigate to review_download
+        return()
+      } else {
+        # If auto-processing failed, fall back to normal flow
+        showNotification("Auto-processing failed. Please proceed manually through the steps.", 
+                        type = "warning", duration = 5)
+        return()
+      }
+    }
+    
+    # Normal flow - navigate to metadata tab
     updateTabItems(session, "sidebar", selected = "meta_data")
   })
   
@@ -202,15 +391,34 @@ server <- function(input, output, session) {
   output$metadata_dropdowns <- renderUI({
     req(nutrData$raw)
     
+    # Define required fields
+    required_fields <- c("Sample Date", "External LabID", "Internal LabID", "Desc 1", "First Nutrient Listed")
     
     # Create dropdowns for each specific title
     dropdowns <- lapply(c(metaDataHeaders, "First Nutrient Listed"), function(title) {
       normalized_title <- gsub(" ", "_", title)
       
+      # Create choices with default option
+      choices <- c("Select a column..." = "", colnames(nutrData$raw))
+      
+      # Set selected value: use saved value if exists, otherwise default to empty string
+      selected_value <- if (!is.null(saved_metadata_values[[normalized_title]])) {
+        saved_metadata_values[[normalized_title]]
+      } else {
+        ""
+      }
+      
+      # Add asterisk to required fields
+      display_label <- if (title %in% required_fields) {
+        paste0(title, " *")
+      } else {
+        title
+      }
+      
       selectInput(inputId = paste0("dropdown_", normalized_title),
-                  label = title,
-                  choices = colnames(nutrData$raw), 
-                  selected = saved_metadata_values[[normalized_title]])  
+                  label = display_label,
+                  choices = choices, 
+                  selected = selected_value)  
     })
     
     # Return the list of dropdowns as UI elements
@@ -223,9 +431,33 @@ server <- function(input, output, session) {
   observeEvent(input$check_metadata, {
     req(nutrData$raw) 
     
+    # Define required fields
+    required_fields <- list(
+      Sample_Date = input$dropdown_Sample_Date,
+      External_LabID = input$dropdown_External_LabID,
+      Internal_LabID = input$dropdown_Internal_LabID,
+      Desc_1 = input$dropdown_Desc_1,
+      First_Nutrient_Listed = input$dropdown_First_Nutrient_Listed
+    )
+    
+    # Check if all required fields are selected (not empty)
+    missing_required <- names(required_fields)[sapply(required_fields, function(x) is.null(x) || x == "")]
+    
+    if (length(missing_required) > 0) {
+      # Show validation error message
+      showNotification(
+        paste("Please select columns for the following required fields:", 
+              paste(gsub("_", " ", missing_required), collapse = ", ")),
+        type = "error",
+        duration = 5
+      )
+      return()
+    }
+    
     step_complete$check_metadata <- TRUE
     
-    selected_columns <- c(
+    # Get all dropdown values
+    all_dropdown_values <- c(
       input$dropdown_Sample_Date,
       input$dropdown_External_LabID,
       input$dropdown_Internal_LabID,
@@ -234,6 +466,10 @@ server <- function(input, output, session) {
       input$dropdown_Desc_3,
       input$dropdown_Desc_4
     )
+    
+    # Filter out empty selections and get corresponding headers
+    selected_columns <- all_dropdown_values[all_dropdown_values != "" & !is.null(all_dropdown_values)]
+    selected_headers <- metaDataHeaders[all_dropdown_values != "" & !is.null(all_dropdown_values)]
 
     # Store the selected columns in reactiveValues
     saved_metadata_values$Sample_Date <- input$dropdown_Sample_Date
@@ -245,13 +481,13 @@ server <- function(input, output, session) {
     saved_metadata_values$Desc_4 <- input$dropdown_Desc_4
     saved_metadata_values$First_Nutrient_Listed <- input$dropdown_First_Nutrient_Listed
     
-    # Save Selected Columns
+    # Save Selected Columns (only non-empty ones)
     nutrData$selected_columns <- c(selected_columns, input$dropdown_First_Nutrient_Listed)
     
     selected_metadata <- nutrData$raw[, selected_columns, drop = FALSE]
     
-    # Rename the selected columns to match the titles
-    colnames(selected_metadata) <- metaDataHeaders
+    # Rename the selected columns to match the corresponding titles
+    colnames(selected_metadata) <- selected_headers
     
     
     # Pull out Nutrient Only Data: Find the starting index of `1st Nutrient Listed`
@@ -399,7 +635,17 @@ server <- function(input, output, session) {
      # Setup conversion table data
      nutrData$conversion_table_data <- nutrData$preconversion_data %>%
        distinct(Nutrient, .keep_all = TRUE) %>%
-       select(Nutrient, `Desc 4`, Value) %>%
+       # Use the first available description column for display (Desc 1 is required so it should exist)
+       {
+         desc_cols <- intersect(c("Desc 1", "Desc 2", "Desc 3", "Desc 4"), colnames(.))
+         if(length(desc_cols) > 0) {
+           select(., Nutrient, all_of(desc_cols[1]), Value) %>%
+             rename(Sample_Desc = all_of(desc_cols[1]))
+         } else {
+           select(., Nutrient, Value) %>%
+             mutate(Sample_Desc = "")
+         }
+       } %>%
        left_join(constants, by = "Nutrient") 
      
 
@@ -492,10 +738,20 @@ server <- function(input, output, session) {
    updateConversionTablePreview <- function() {
      if (saved_settings$conversion_method == "Convert from Dry Matter to As-Fed") {
        # Show preview of as-fed values
+       # Get the metadata column names (excluding Nutrient and Value columns)
+       metadata_cols <- setdiff(colnames(nutrData$preconversion_data), c("Nutrient", "Value"))
+       
+       # Ensure we have at least some metadata columns
+       if (length(metadata_cols) == 0) {
+         showNotification("Error: No metadata columns found. Please check your data structure.", 
+                         type = "error", duration = 5)
+         return()
+       }
+       
        preview_data <- nutrData$preconversion_data %>%
          left_join(saved_settings$conversion_key, by = "Nutrient") %>%
          mutate(Value = as.numeric(Value) * Multiplier) %>%
-         group_by(`Sample Date`, `External LabID`, `Internal LabID`, `Desc 1`, `Desc 2`, `Desc 3`, `Desc 4`) %>%
+         group_by(across(all_of(metadata_cols))) %>%
          mutate(
            dry_matter_value = ifelse(any(str_detect(tolower(Nutrient), "dry matter")), 
                                    Value[str_detect(tolower(Nutrient), "dry matter")][1], 
@@ -512,7 +768,17 @@ server <- function(input, output, session) {
          ) %>%
          select(-Multiplier, -dry_matter_value, -af_value) %>%
          distinct(Nutrient, .keep_all = TRUE) %>%
-         select(Nutrient, `Desc 4`, preview_value) %>%
+         # Use the first available description column for display
+         {
+           desc_cols <- intersect(c("Desc 1", "Desc 2", "Desc 3", "Desc 4"), colnames(.))
+           if(length(desc_cols) > 0) {
+             select(., Nutrient, all_of(desc_cols[1]), preview_value) %>%
+               rename(Sample_Desc = all_of(desc_cols[1]))
+           } else {
+             select(., Nutrient, preview_value) %>%
+               mutate(Sample_Desc = "")
+           }
+         } %>%
          rename(Value = preview_value)
        
        # Update the conversion table data with preview values
@@ -528,7 +794,17 @@ server <- function(input, output, session) {
        # Reset to original values (no conversion)
        original_data <- nutrData$preconversion_data %>%
          distinct(Nutrient, .keep_all = TRUE) %>%
-         select(Nutrient, `Desc 4`, Value)
+         # Use the first available description column for display
+         {
+           desc_cols <- intersect(c("Desc 1", "Desc 2", "Desc 3", "Desc 4"), colnames(.))
+           if(length(desc_cols) > 0) {
+             select(., Nutrient, all_of(desc_cols[1]), Value) %>%
+               rename(Sample_Desc = all_of(desc_cols[1]))
+           } else {
+             select(., Nutrient, Value) %>%
+               mutate(Sample_Desc = "")
+           }
+         }
        
        nutrData$conversion_table_data <- original_data %>%
          left_join(constants, by = "Nutrient") %>%
@@ -566,7 +842,7 @@ server <- function(input, output, session) {
          
          fluidRow(
            column(2, strong(data$Nutrient[i])),
-           column(2, data$`Desc 4`[i]),
+           column(2, data$Sample_Desc[i]),
            column(2, div(
              style = "font-size: 12px; color: #666; margin-bottom: 2px;", 
              sample_label,
@@ -617,7 +893,7 @@ server <- function(input, output, session) {
          columnDefs = list(
          list(targets = 5, className = "editable")  # Apply your CSS class to column index 5 (0-based)
           )
-       ),
+       )
      )
    })
 
@@ -687,6 +963,16 @@ server <- function(input, output, session) {
      # Apply conversion based on selected method
      if (saved_settings$conversion_method == "Convert from Dry Matter to As-Fed") {
        # Convert from dry matter to as-fed format
+       # Get the metadata column names (excluding Nutrient and Value columns)
+       metadata_cols <- setdiff(colnames(nutrData$preconversion_data), c("Nutrient", "Value"))
+       
+       # Ensure we have at least some metadata columns
+       if (length(metadata_cols) == 0) {
+         showNotification("Error: No metadata columns found. Please check your data structure.", 
+                         type = "error", duration = 5)
+         return()
+       }
+       
        nutrData$converted_data <- nutrData$preconversion_data %>%
          left_join(saved_settings$conversion_key, by = "Nutrient") %>%
          mutate(
@@ -694,7 +980,7 @@ server <- function(input, output, session) {
            Value = as.numeric(Value) * Multiplier
          ) %>%
          # Add dry matter values to each row for conversion
-         group_by(`Sample Date`, `External LabID`, `Internal LabID`, `Desc 1`, `Desc 2`, `Desc 3`, `Desc 4`) %>%
+         group_by(across(all_of(metadata_cols))) %>%
          mutate(
            dry_matter_value = ifelse(any(str_detect(tolower(Nutrient), "dry matter")), 
                                    Value[str_detect(tolower(Nutrient), "dry matter")][1], 
@@ -825,7 +1111,29 @@ server <- function(input, output, session) {
     nutrData$conversion_table_data <- NULL
     nutrData$converted_data <- NULL
     nutrData$selected_columns <- NULL
+    
+    # Clear only the data file input (keep settings file uploaded)
+    shinyjs::reset("file")
+    
+    # Keep the auto-apply checkbox state as well (don't reset it)
   
     updateTabItems(session, "sidebar", selected = "upload_data")
+  })
+  
+  # Back button observers
+  observeEvent(input$back_to_upload, {
+    updateTabItems(session, "sidebar", selected = "upload_data")
+  })
+  
+  observeEvent(input$back_to_metadata, {
+    updateTabItems(session, "sidebar", selected = "meta_data")
+  })
+  
+  observeEvent(input$back_to_nutrients, {
+    updateTabItems(session, "sidebar", selected = "nutrient_names")
+  })
+  
+  observeEvent(input$back_to_conversion, {
+    updateTabItems(session, "sidebar", selected = "unit_conversions")
   })
 }
