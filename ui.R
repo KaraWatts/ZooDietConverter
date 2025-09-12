@@ -99,8 +99,18 @@ metadata_content <- fluidPage(
     column(10, div(class = 'table', DTOutput("metadataTable")))
     ),
   
-  actionButton('check_metadata', 'Check Selection'),
-  actionButton('save_metadata', 'Save and Continue')
+  fluidRow(
+    column(6,
+           actionButton('back_to_upload', 'Back', icon = icon("arrow-left"),
+                       style = "margin-right: 10px;")
+    ),
+    column(6,
+           div(style = "text-align: right;",
+               actionButton('check_metadata', 'Check Selection', 
+                           style = "margin-right: 10px;"),
+               actionButton('save_metadata', 'Save and Continue'))
+    )
+  )
 )
 
 #NUTRIENT NAMES TAB
@@ -115,7 +125,17 @@ nutrient_names_content <- fluidPage(
   ),
   
   div(class = 'table', DTOutput('nutrientTable')),
-  actionButton('save_nutrients', 'Save and Continue'),
+  
+  fluidRow(
+    column(6,
+           actionButton('back_to_metadata', 'Back', icon = icon("arrow-left"),
+                       style = "margin-right: 10px;")
+    ),
+    column(6,
+           div(style = "text-align: right;",
+               actionButton('save_nutrients', 'Save and Continue'))
+    )
+  )
   
   )
 
@@ -177,7 +197,16 @@ unit_conversion_content <- fluidPage(
       uiOutput("conversion_method_selector")
   ),
 
-  actionButton('save_conversions', 'Save and Continue'),
+  fluidRow(
+    column(6,
+           actionButton('back_to_nutrients', 'Back', icon = icon("arrow-left"),
+                       style = "margin-right: 10px;")
+    ),
+    column(6,
+           div(style = "text-align: right;",
+               actionButton('save_conversions', 'Save and Continue'))
+    )
+  )
   
 )
 
@@ -211,7 +240,16 @@ review_content <- fluidPage(
   ),
   
   div(style = "margin-top: 20px;",
-      actionButton('return', 'Upload A New File')
+      fluidRow(
+        column(6,
+               actionButton('back_to_conversion', 'Back', icon = icon("arrow-left"),
+                           style = "margin-right: 10px;")
+        ),
+        column(6,
+               div(style = "text-align: right;",
+                   actionButton('return', 'Upload A New File'))
+        )
+      )
   )
   
 )

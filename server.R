@@ -1119,4 +1119,21 @@ server <- function(input, output, session) {
   
     updateTabItems(session, "sidebar", selected = "upload_data")
   })
+  
+  # Back button observers
+  observeEvent(input$back_to_upload, {
+    updateTabItems(session, "sidebar", selected = "upload_data")
+  })
+  
+  observeEvent(input$back_to_metadata, {
+    updateTabItems(session, "sidebar", selected = "meta_data")
+  })
+  
+  observeEvent(input$back_to_nutrients, {
+    updateTabItems(session, "sidebar", selected = "nutrient_names")
+  })
+  
+  observeEvent(input$back_to_conversion, {
+    updateTabItems(session, "sidebar", selected = "unit_conversions")
+  })
 }

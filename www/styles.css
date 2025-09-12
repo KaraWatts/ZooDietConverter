@@ -2,6 +2,12 @@
   background-color: rgb(56,126,63) !important;
 }
 
+/* Ensure proper positioning context for absolute elements */
+body, .wrapper {
+  position: relative;
+  min-height: 100vh;
+}
+
 .skin-blue .main-sidebar {
   background-color: rgb(56,126,63) !important;
 }
@@ -125,6 +131,7 @@ input:checked + .slider:before {
     padding-left: 15px !important;
     margin-bottom: 20px;
     text-align: left;
+    z-index: 2000;
   }
 .main-header .navbar-static-top {
     display: none !important;
@@ -140,7 +147,7 @@ input:checked + .slider:before {
   
 /* Custom sidebar toggle button */
 .sidebar-toggle-custom {
-    position: fixed;
+    position: absolute;
     top: 50px;
     left: 0;
     z-index: 1050;
@@ -148,7 +155,7 @@ input:checked + .slider:before {
     color: white;
     border: none;
     width: 20px;
-    height: 100%;
+    height: calc(100% - 50px);
     cursor: pointer;
     display: flex;
     align-items: center;
