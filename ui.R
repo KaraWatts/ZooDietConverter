@@ -45,6 +45,12 @@ upload_data_content <- fluidPage(
   #Content
       h3(class = "h3", "Upload and Review Raw Data"),
       
+      # Instructions section
+      div(class = "input-section", style = "border-left: 4px solid #387E3F; background-color: #E6F0E7;",
+          h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
+          p("This is where you begin the data conversion process by uploading your raw nutrition data. The converter is specifically designed to work with Dairy One laboratory reports in the '-29.csv' format, which contains detailed nutritional analysis data. If you've used this converter before, you can also upload a previously saved settings file to automatically configure your metadata mappings and unit conversions, saving you time on similar datasets.")
+      ),
+      
       # Data upload section
       div(class = "input-section",
           h4("Upload Nutrition Data", style = "color: rgb(56,126,63); margin-bottom: 10px;"),
@@ -71,6 +77,13 @@ upload_data_content <- fluidPage(
 metadata_content <- fluidPage(
   
   h3("Select Header Meta Data"),
+  
+  # Instructions section
+  div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
+      h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
+      p("Metadata mapping is crucial for organizing your nutrition data correctly within the ZooDiets system. Here you'll identify which columns in your uploaded file contain essential information like food names, diet identifiers, animal names, and dates. This mapping ensures that your converted data maintains proper structure and can be easily imported into ZooDiets with all the necessary context intact.")
+  ),
+  
   fluidRow(
     
     column(2, div(class= 'metadata-dropdown', uiOutput("metadata_dropdowns"))),
@@ -85,6 +98,13 @@ metadata_content <- fluidPage(
 nutrient_names_content <- fluidPage(
 
   h3("Align Nutrient Names with ZooDiets Standards"),
+  
+  # Instructions section
+  div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
+      h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
+      p("Standardizing nutrient names is essential for compatibility with the ZooDiets database. Different laboratories and data sources often use varying terminology for the same nutrients (e.g., 'Crude Protein' vs 'CP' vs 'Protein'). This alignment process ensures that your data will integrate seamlessly with ZooDiets' standardized nutrient database, allowing for accurate nutritional calculations and comparisons across different food items and diets.")
+  ),
+  
   div(class = 'table', DTOutput('nutrientTable')),
   actionButton('save_nutrients', 'Save and Continue'),
   
@@ -116,6 +136,12 @@ unit_conversion_content <- fluidPage(
   ")),
 
   h3("Unit Conversions & Data Format"),
+  
+  # Instructions section
+  div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
+      h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
+      p("Unit conversion ensures your nutritional data is expressed in the correct format for ZooDiets. Laboratory reports may present nutrients in various units (percentages, grams per kilogram, milligrams per gram, etc.), but ZooDiets requires specific standardized units for accurate diet formulation and analysis. The converter automatically applies the conversion factors you specify to ensure unit standardization for ZooDiets.")
+  ),
   
   # Table headers
   div(class="form-box",
@@ -150,6 +176,13 @@ unit_conversion_content <- fluidPage(
 review_content <- fluidPage(
   
   h3("Review Converted Data"),
+  
+  # Instructions section
+  div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
+      h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
+      p("This final step presents your fully converted data, ready for import into ZooDiets. The conversion process has standardized your nutrient names, applied appropriate unit conversions, and organized your metadata according to ZooDiets requirements. You can download the converted file for immediate use, and optionally save your conversion settings as a template for processing similar datasets in the future, streamlining your workflow for routine data conversions.")
+  ),
+  
   div(class = 'table', DTOutput('convertedTable')),
   
   # Download buttons section
@@ -179,7 +212,7 @@ ui <- dashboardPage(
 
   
   dashboardHeader(
-    title = "Convert Zoo Diet Data"),
+    title = "Zoo Diet Navigator Data Converter"),
   
   dashboardSidebar(
 
@@ -203,6 +236,43 @@ ui <- dashboardPage(
   dashboardBody(
     useShinyjs(),
     includeCSS("www/styles.css"),
+    
+    
+    # Custom sidebar toggle button
+    tags$div(
+      class = "sidebar-toggle-custom",
+      onclick = "toggleSidebar()",
+      tags$i(class = "fa fa-chevron-left", id = "toggle-icon")
+    ),
+    
+    # JavaScript for sidebar toggle functionality
+    tags$script(HTML("
+      let sidebarCollapsed = false;
+      
+      function toggleSidebar() {
+        const body = document.body;
+        const icon = document.getElementById('toggle-icon');
+        
+        if (sidebarCollapsed) {
+          // Expand sidebar
+          body.classList.remove('sidebar-collapsed');
+          body.classList.add('sidebar-expanded');
+          icon.className = 'fa fa-chevron-left';
+          sidebarCollapsed = false;
+        } else {
+          // Collapse sidebar
+          body.classList.remove('sidebar-expanded');
+          body.classList.add('sidebar-collapsed');
+          icon.className = 'fa fa-chevron-right';
+          sidebarCollapsed = true;
+        }
+      }
+      
+      // Initialize sidebar as expanded
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.classList.add('sidebar-expanded');
+      });
+    ")),
     
     # allow disabled tabs
     tags$script(HTML("

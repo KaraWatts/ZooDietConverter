@@ -18,6 +18,10 @@
   color: white !important;
 }
 
+.container-fluid {
+  padding-left: 30px !important;
+  }
+
 .table {
     display: flex;
     justify-content: center; 
@@ -107,3 +111,114 @@ input:checked + .slider:before {
   font-style: italic;
   letter-spacing: 1px;
 }
+
+.main-header .navbar {
+    background-color: rgb(56,126,63) !important;
+  }
+.main-header .navbar .navbar-brand {
+    color: white !important;
+  }
+.main-header .logo {
+    background-color: rgb(56,126,63) !important;
+    color: white !important;
+    width: 100% !important; 
+    padding-left: 15px !important;
+    margin-bottom: 20px;
+    text-align: left;
+  }
+.main-header .navbar-static-top {
+    display: none !important;
+  }
+  
+.navbar .navbar-toggle {
+    display: none !important;
+  }
+  
+.skin-blue .main-header .navbar .navbar-toggle {
+    display: none !important;
+  }
+  
+/* Custom sidebar toggle button */
+.sidebar-toggle-custom {
+    position: fixed;
+    top: 50px;
+    left: 0;
+    z-index: 1050;
+    background-color: rgb(32, 72, 36) !important;
+    color: white;
+    border: none;
+    width: 20px;
+    height: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+  }
+  
+.sidebar-toggle-custom:hover {
+    background-color: rgb(42, 95, 47);
+  }
+  
+/* When sidebar is collapsed */
+.sidebar-collapsed .main-sidebar {
+    width: 0 !important;
+    overflow: hidden;
+  }
+  
+.sidebar-collapsed .content-wrapper,
+  .sidebar-collapsed .right-side,
+  .sidebar-collapsed .main-footer {
+    margin-left: 0 !important;
+  }
+  
+.sidebar-collapsed .sidebar-toggle-custom {
+    left: 0;
+  }
+  
+/* When sidebar is expanded */
+.sidebar-expanded .main-sidebar {
+    width: 280px !important;
+  }
+  
+.sidebar-expanded .content-wrapper,
+.sidebar-expanded .right-side,
+.sidebar-expanded .main-footer {
+    margin-left: 280px !important;
+  }
+  
+.sidebar-expanded .sidebar-toggle-custom {
+    left: 280px;
+  }
+  
+/* Smooth transitions */
+.main-sidebar,
+.content-wrapper,
+.right-side,
+.main-footer,
+.sidebar-toggle-custom {
+    transition: all 0.3s ease;
+  }
+  
+/* Adjust content margin to accommodate wider logo */
+@media (min-width: 768px) {
+  .content-wrapper, .right-side, .main-footer {
+      margin-left: 280px !important;
+    }
+  .main-sidebar {
+      width: 280px !important;
+    }
+  }
+  
+.sidebar-menu > li.active > a {
+    border-left-color: rgba(247, 249, 248, 1) !important;
+  }
+.sidebar-menu > li > a:hover,
+.sidebar-menu > li.active > a {
+    background-color: rgba(35,85,40,0.1) !important;
+  }
+.sidebar-menu > li:not(.active) > a:hover {
+    border-left-color: white !important;
+  }
