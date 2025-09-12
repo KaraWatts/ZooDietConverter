@@ -392,7 +392,7 @@ server <- function(input, output, session) {
     req(nutrData$raw)
     
     # Define required fields
-    required_fields <- c("Sample Date", "External LabID", "Internal LabID", "Desc 1", "First Nutrient Listed")
+    required_fields <- c("Sample Date", "External LabID", "Desc 1", "First Nutrient Listed")
     
     # Create dropdowns for each specific title
     dropdowns <- lapply(c(metaDataHeaders, "First Nutrient Listed"), function(title) {
@@ -435,7 +435,6 @@ server <- function(input, output, session) {
     required_fields <- list(
       Sample_Date = input$dropdown_Sample_Date,
       External_LabID = input$dropdown_External_LabID,
-      Internal_LabID = input$dropdown_Internal_LabID,
       Desc_1 = input$dropdown_Desc_1,
       First_Nutrient_Listed = input$dropdown_First_Nutrient_Listed
     )
