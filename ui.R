@@ -1,5 +1,6 @@
 # Run this before publishing:
 # .rs.files.restoreBindings()
+# Test comment
 
 library(shiny)
 library(DT)
