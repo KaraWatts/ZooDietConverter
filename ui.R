@@ -81,7 +81,8 @@ metadata_content <- fluidPage(
   # Instructions section
   div(style = "background-color: #E6F0E7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #387E3F;",
       h4("About This Step", style = "color: #1C4420; margin-bottom: 10px;"),
-      p("Metadata mapping is crucial for organizing your nutrition data correctly within the ZooDiets system. Here you'll identify which columns in your uploaded file contain essential information like food names, diet identifiers, animal names, and dates. This mapping ensures that your converted data maintains proper structure and can be easily imported into ZooDiets with all the necessary context intact.")
+      p("Metadata mapping is crucial for organizing your nutrition data correctly within the ZooDiets system. Here you'll identify which columns in your uploaded file contain essential information like food names, diet identifiers, animal names, and dates. This mapping ensures that your converted data maintains proper structure and can be easily imported into ZooDiets with all the necessary context intact."),
+      p(style = "margin-top: 10px; font-weight: bold; color: #1C4420;", "Fields marked with * are required.")
   ),
   
   fluidRow(
