@@ -383,7 +383,7 @@ ui <- dashboardPage(
     ),
     div(
       class = "sidebar-version",
-      "Version 1.1.1"
+      "Version 1.1.2"
     )
   ),
   
