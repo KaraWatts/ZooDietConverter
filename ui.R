@@ -357,7 +357,7 @@ review_content <- fluidPage(
 
 
 ui <- dashboardPage(
-
+  title = "ZDN Data Converter",
   
   dashboardHeader(
     title = tags$div(
